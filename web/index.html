@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="dark light">
+  <!-- Defesa extra contra XSS: só scripts/estilos deste site; imagens só das miniaturas do YouTube.
+       connect-src aberto porque a sinalização do PeerJS é configurável (sig= no hash, ws/wss/http/https). -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://i.ytimg.com; connect-src 'self' https: wss: http: ws:; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>KTV - Fila de karaokê</title>
   <link rel="stylesheet" href="./style.css">
   <!-- PeerJS local (global Peer), carregado antes do módulo -->
