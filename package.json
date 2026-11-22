@@ -12,6 +12,7 @@
     "sync": "node scripts/sync-protocol.mjs"
   },
   "devDependencies": {
-    "peer": "^1.0.2"
+    "peer": "^1.0.2",
+    "playwright": "^1.65.1"
   }
 }
