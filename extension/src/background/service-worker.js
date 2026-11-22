@@ -41,6 +41,15 @@ const janelas = {
       return false;
     }
   },
+  // Transforma uma aba existente em aba KTV (navega para a URL com o marcador); false se falhar.
+  async adotar(tabId, url) {
+    try {
+      await chrome.tabs.update(tabId, { url });
+      return true;
+    } catch {
+      return false;
+    }
+  },
   // Recarrega a aba (reinjeta o content script); false se ela não existe mais.
   async recarregar(tabId) {
     try {
@@ -72,7 +81,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   return true; // resposta assíncrona (whoami)
 });
 
-chrome.action.onClicked.addListener(() => { nucleo.abrirKtv().catch((e) => console.error('[KTV sw]', e)); });
+chrome.action.onClicked.addListener((aba) => { nucleo.abrirKtv(aba).catch((e) => console.error('[KTV sw]', e)); });
 chrome.tabs.onRemoved.addListener((tabId) => { nucleo.abaFechada(tabId).catch(() => {}); });
 chrome.windows.onRemoved.addListener((windowId) => { nucleo.janelaFechada(windowId).catch(() => {}); });
 chrome.runtime.onStartup.addListener(() => { nucleo.navegadorIniciou().catch((e) => console.error('[KTV sw]', e)); });

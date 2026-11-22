@@ -31,6 +31,7 @@ function montar({ storageMap = new Map(), oembed, buscar, offscreenExiste = fals
     janelas: {
       criar: async () => { log.criadas++; log.abas.add(KTV_TAB); return { tabId: KTV_TAB, windowId: 70 }; },
       focar: async (tabId) => { log.focos++; return log.abas.has(tabId); },
+      adotar: async (tabId, url) => { (log.adotadas ||= []).push({ tabId, url }); return true; },
       recarregar: async (tabId) => { (log.recargas ||= []).push(tabId); return log.abas.has(tabId); },
     },
     buscar: buscar || (async () => [{ videoId: V1, titulo: 'Achado', canal: 'Can', duracao: '3:00' }]),
@@ -371,6 +372,35 @@ test('janela KTV: cria uma vez, foca nas seguintes e recria se a aba sumiu', asy
   h.log.abas.delete(KTV_TAB); // aba foi fechada sem evento chegar
   await h.nucleo.abrirKtv();
   assert.equal(h.log.criadas, 2);
+});
+
+test('ícone numa aba do YouTube com fila: a aba vira a KTV e a fila é mantida', async () => {
+  const h = montar();
+  await prepararKtv(h);
+  await h.peer('c1', { t: 'add', videoId: V1 });
+  await h.peer('c1', { t: 'add', videoId: V2 });
+  await h.nucleo.abaFechada(KTV_TAB); // sem janela KTV viva
+  const criadas = h.log.criadas;
+  await h.nucleo.abrirKtv({ id: 55, windowId: 9, url: 'https://www.youtube.com/watch?v=abc' });
+  assert.equal(h.log.criadas, criadas); // não abriu outra janela
+  assert.equal(h.log.adotadas[0].tabId, 55);
+  assert.match(h.log.adotadas[0].url, /[?&]ktv=1/);
+  const w = await h.int('whoami', {}, sender(55));
+  assert.equal(w.ktv, true);
+  assert.deepEqual(w.state.fila.map((i) => i.videoId), [V1, V2]);
+});
+
+test('ícone numa aba que não é do YouTube, ou sem fila: abre a janela KTV normal', async () => {
+  const h = montar();
+  await h.nucleo.abrirKtv({ id: 55, windowId: 9, url: 'https://www.youtube.com/' }); // sem fila
+  assert.equal(h.log.criadas, 1);
+  assert.equal(h.log.adotadas, undefined);
+  const g = montar();
+  await prepararKtv(g);
+  await g.peer('c1', { t: 'add', videoId: V1 });
+  await g.nucleo.abaFechada(KTV_TAB);
+  await g.nucleo.abrirKtv({ id: 55, windowId: 9, url: 'https://example.com/' });
+  assert.equal(g.log.adotadas, undefined);
 });
 
 test('fechar aba/janela limpa a marca KTV e o started', async () => {
