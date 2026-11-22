@@ -506,3 +506,18 @@ test('extensão atualizada/recarregada: recarrega a aba KTV para reinjetar o con
   await h.nucleo.extensaoAtualizada();
   assert.equal((await h.int('whoami', {}, sender())).ktv, false);
 });
+
+test('fechar a janela KTV com música tocando: celulares veem "pausado"; ao reabrir e Iniciar, volta a tocar', async () => {
+  const h = montar();
+  await prepararKtv(h);
+  await h.peer('c1', { t: 'add', videoId: V1 });
+  await h.int('started', {}, sender());
+  assert.equal(h.ultimoState().tocando, true);
+  await h.nucleo.janelaFechada(70);
+  assert.equal(h.ultimoState().tocando, false);
+  assert.equal(h.ultimoState().atual.videoId, V1);
+  await h.nucleo.abrirKtv();
+  await h.int('started', {}, sender());
+  assert.equal(h.ultimoState().tocando, true);
+  assert.equal(h.comandosTab('play').at(-1).videoId, V1);
+});

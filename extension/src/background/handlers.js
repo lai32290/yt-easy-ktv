@@ -149,13 +149,22 @@ export function criarNucleo(deps) {
       await salvarRt();
     });
   }
+  // Aba/janela KTV fechada: a música atual fica guardada, mas os celulares passam a ver "Pausado".
+  async function fechouKtvDentro() {
+    await limparKtvDentro();
+    if (estado.tocando) {
+      estado = { ...estado, tocando: false };
+      await salvarEstado();
+      await aTodos(msgEstado());
+    }
+  }
   const abaFechada = (tabId) => travar(async () => {
     if (rt.ktvTabId == null || rt.ktvTabId !== tabId) return undefined;
-    return limparKtvDentro();
+    return fechouKtvDentro();
   });
   const janelaFechada = (windowId) => travar(async () => {
     if (rt.ktvWindowId == null || rt.ktvWindowId !== windowId) return undefined;
-    return limparKtvDentro();
+    return fechouKtvDentro();
   });
   async function limparKtvDentro() {
     rt.ktvTabId = null; rt.ktvWindowId = null; rt.started = false;
@@ -364,6 +373,7 @@ export function criarNucleo(deps) {
           await salvarRt();
           const puxou = !estado.atual && estado.fila.length > 0;
           if (puxou) estado = avancar(estado).estado;
+          else if (estado.atual && !estado.tocando) estado = { ...estado, tocando: true }; // janela reaberta
           await salvarEstado();
           if (puxou || !jaLiberado) await acionarPlayer();
           return difundirEstado();
