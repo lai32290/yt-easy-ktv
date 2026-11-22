@@ -120,6 +120,13 @@ export function avaliar(s, obs, agora) {
   if (!s || s.endedEnviado || s.erroEnviado) return [];
   const naPagina = obs.urlVideoId === s.videoId;
 
+  // Anúncio (pré-roll ou no meio): o <video> é o mesmo, mas o que toca não é a música.
+  // Não conta como `playing` da música e empurra o timeout (anúncios longos não podem pular a música).
+  if (naPagina && obs.anuncio) {
+    s.t0 = agora;
+    return [];
+  }
+
   if (naPagina && obs.tocando) {
     s.viuPlaying = true;
     s.bloqueado = false;

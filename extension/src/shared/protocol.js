@@ -47,8 +47,8 @@ export const E2C = {
 // content -> sw     (target:'sw')
 //   whoami    {}                -> resposta { ktv: boolean, state, roomId, siteUrl, conns }
 //   started   {}                              usuário clicou "Iniciar" (autoplay liberado)
-//   ended     {}                              vídeo terminou
-//   playerError { codigo }                    vídeo indisponível/restrito/timeout
+//   ended     { videoId }                     vídeo terminou (o SW ignora se não for o `atual`)
+//   playerError { codigo, videoId }           vídeo indisponível/restrito/timeout
 // sw -> content     (target:'content', via chrome.tabs.sendMessage)
 //   play      { videoId }
 //   idle      {}                              fila acabou; parar/mostrar QR grande

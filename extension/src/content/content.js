@@ -265,9 +265,15 @@
     });
 
     // ================= Player =================
+    // O player da página /watch é o #movie_player. A home e as listas também têm players de
+    // prévia (passar o mouse na miniatura) com `video.html5-main-video`: nunca usar esses primeiro.
     const SEL_VIDEO = 'video.html5-main-video';
-    const achaVideo = () =>
-      document.querySelector(SEL_VIDEO) || document.querySelector('#movie_player video');
+    const achaPlayer = () =>
+      document.querySelector('#movie_player') || document.querySelector('.html5-video-player');
+    const achaVideo = () => {
+      const p = achaPlayer();
+      return (p && (p.querySelector(SEL_VIDEO) || p.querySelector('video'))) || document.querySelector(SEL_VIDEO);
+    };
     const urlVideoId = () => videoIdFromHref(location.href);
     const emWatch = () => location.pathname === '/watch';
 
@@ -279,13 +285,17 @@
         'yt-player-error-message-renderer',
         '.player-error-message',
       ];
+      const p = achaPlayer();
       for (const sel of candidatos) {
-        const e = document.querySelector(sel);
+        const e = (p && p.querySelector(sel)) || document.querySelector(sel);
         if (e && (e.textContent || '').trim() && e.getClientRects().length > 0) return true;
       }
       return false;
     }
-    const anuncioTocando = () => !!document.querySelector('.html5-video-player.ad-showing');
+    const anuncioTocando = () => {
+      const p = achaPlayer();
+      return p ? p.classList.contains('ad-showing') || p.classList.contains('ad-interrupting') : false;
+    };
 
     // [VALIDAR] botão de autoplay ("Reprodução automática") na barra do player.
     const SEL_AUTONAV_LIGADO = [
@@ -383,10 +393,10 @@
             cancelarProximo();
           } else if (acao === 'enviarEnded') {
             log('vídeo terminou');
-            enviar({ t: INT.ENDED });
+            enviar({ t: INT.ENDED, videoId: sessao.videoId }); // o SW ignora ended atrasado de outro vídeo
           } else if (acao === 'enviarErro') {
             log('erro no player / timeout');
-            enviar({ t: INT.PLAYER_ERROR, codigo: 'video_indisponivel' });
+            enviar({ t: INT.PLAYER_ERROR, codigo: 'video_indisponivel', videoId: sessao.videoId });
           } else if (acao === 'tocar') {
             const v = achaVideo();
             if (v) tentarTocar(v);

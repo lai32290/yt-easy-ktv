@@ -123,6 +123,24 @@ test('ended ignorado sem ter visto `playing` (vídeo reaproveitado) e durante an
   assert.ok(!avaliar(s2, obs({ terminou: true, pausado: true, tocando: false, anuncio: true }), 200).includes('enviarEnded'));
 });
 
+test('anúncio: não conta como playing, não dispara timeout e o fim do anúncio não é o fim da música', () => {
+  const s = novaSessao(ID, 0);
+  const ad = obs({ anuncio: true });
+  // 3 anúncios seguidos de 30 s cada: nada de enviarErro/enviarEnded
+  for (let t = 1000; t <= 90000; t += 1000) assert.deepEqual(avaliar(s, ad, t), []);
+  assert.equal(s.viuPlaying, false);
+  // vídeo "terminado" logo depois do anúncio, antes de a música tocar: não é ended
+  assert.ok(!avaliar(s, obs({ terminou: true, pausado: true, tocando: false }), 91000).includes('enviarEnded'));
+  // timeout conta a partir do fim do anúncio
+  const parado = obs({ tocando: false, pausado: true });
+  assert.ok(!avaliar(s, parado, 90000 + PLAY_TIMEOUT_MS - 1).includes('enviarErro'));
+  // a música toca e termina normalmente
+  const s2 = novaSessao(ID, 0);
+  avaliar(s2, ad, 1000);
+  avaliar(s2, obs(), 40000);
+  assert.deepEqual(avaliar(s2, obs({ terminou: true, pausado: true, tocando: false }), 200000), ['pausar', 'enviarEnded']);
+});
+
 test('ended ignorado se a URL ainda é de outro vídeo', () => {
   const s = novaSessao(ID, 0);
   avaliar(s, obs(), 100);
