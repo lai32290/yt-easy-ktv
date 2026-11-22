@@ -360,11 +360,13 @@ export function criarNucleo(deps) {
           }
         });
 
-      case INT.WHOAMI:
-        await carregar();
+      case INT.WHOAMI: {
+        // Pela trava: espera, p.ex., o navegadorIniciou() limpar um tabId de outra sessão do Chrome.
+        const ktv = await travar(async () => doKtv(sender));
         // Offscreen sumiu com o SW vivo (ex.: renderer caiu): recria e religa o Peer com a mesma sala.
-        if (doKtv(sender)) await seguro(async () => { if (await ensureOffscreen()) await init(); });
+        if (ktv) await seguro(async () => { if (await ensureOffscreen()) await init(); });
         return { ktv: doKtv(sender), ...dadosPainel() };
+      }
 
       case INT.STARTED:
         return travar(async () => {
