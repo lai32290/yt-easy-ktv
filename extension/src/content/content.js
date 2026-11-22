@@ -92,38 +92,44 @@
     const sombra = raiz.attachShadow({ mode: 'open' });
     const estilo = document.createElement('style');
     estilo.textContent = css;
-    sombra.innerHTML = `
-      <div class="ktv">
-        <section class="ocioso" aria-label="Entrar na sala do KTV" hidden>
-          <div class="ocioso-card">
-            <h1>KTV</h1>
-            <div class="qr qr-grande" role="img" aria-label="QR Code para entrar na sala"></div>
-            <p class="instrucao"></p>
-            <p class="url"></p>
-            <p class="status" role="status"></p>
-            <p class="aviso" role="alert" hidden></p>
-          </div>
-        </section>
-        <aside class="tocando" aria-label="Fila do KTV" hidden>
-          <header>
-            <span class="conns" role="status"></span>
-            <button type="button" class="btn-recolher" aria-label="Recolher painel" aria-expanded="true">–</button>
-          </header>
-          <div class="corpo">
-            <div class="qr qr-pequeno" role="img" aria-label="QR Code para entrar na sala"></div>
-            <div class="lista">
-              <ol class="fila"></ol>
-              <p class="mais" hidden></p>
-            </div>
-          </div>
-          <p class="aviso" role="alert" hidden></p>
-        </aside>
-      </div>
-      <div class="iniciar" hidden>
-        <button type="button" class="btn-iniciar" aria-label="Iniciar KTV">▶ Iniciar KTV</button>
-      </div>
-      <button type="button" class="btn-tocar" aria-label="Tocar vídeo" hidden>▶ Tocar</button>
-    `;
+    // Montado com createElement (sem innerHTML): o youtube.com exige Trusted Types na página.
+    // Hoje o mundo isolado do content script não é afetado, mas assim o painel não depende disso.
+    const h = (tag, attrs = {}, ...filhos) => {
+      const e = document.createElement(tag);
+      for (const [k, v] of Object.entries(attrs)) {
+        if (k === 'hidden') e.hidden = !!v;
+        else e.setAttribute(k, v);
+      }
+      for (const f of filhos) e.append(f);
+      return e;
+    };
+    const qrAttrs = (cls) => ({ class: `qr ${cls}`, role: 'img', 'aria-label': 'QR Code para entrar na sala' });
+    sombra.append(
+      h('div', { class: 'ktv' },
+        h('section', { class: 'ocioso', 'aria-label': 'Entrar na sala do KTV', hidden: true },
+          h('div', { class: 'ocioso-card' },
+            h('h1', {}, 'KTV'),
+            h('div', qrAttrs('qr-grande')),
+            h('p', { class: 'instrucao' }),
+            h('p', { class: 'url' }),
+            h('p', { class: 'status', role: 'status' }),
+            h('p', { class: 'aviso', role: 'alert', hidden: true }))),
+        h('aside', { class: 'tocando', 'aria-label': 'Fila do KTV', hidden: true },
+          h('header', {},
+            h('span', { class: 'conns', role: 'status' }),
+            h('button', {
+              type: 'button', class: 'btn-recolher', 'aria-label': 'Recolher painel', 'aria-expanded': 'true',
+            }, '–')),
+          h('div', { class: 'corpo' },
+            h('div', qrAttrs('qr-pequeno')),
+            h('div', { class: 'lista' },
+              h('ol', { class: 'fila' }),
+              h('p', { class: 'mais', hidden: true }))),
+          h('p', { class: 'aviso', role: 'alert', hidden: true }))),
+      h('div', { class: 'iniciar', hidden: true },
+        h('button', { type: 'button', class: 'btn-iniciar', 'aria-label': 'Iniciar KTV' }, '▶ Iniciar KTV')),
+      h('button', { type: 'button', class: 'btn-tocar', 'aria-label': 'Tocar vídeo', hidden: true }, '▶ Tocar'),
+    );
     sombra.prepend(estilo);
     const $ = (sel) => sombra.querySelector(sel);
     const el = {
@@ -140,17 +146,42 @@
       (document.body || document.documentElement).appendChild(raiz);
     }
 
+    // QR como <svg> montado com createElementNS (sem innerHTML; ver Trusted Types acima).
+    const SVG_NS = 'http://www.w3.org/2000/svg';
     function gerarQr(texto) {
       if (!qrcode) return null;
       try {
         const qr = qrcode(0, 'M');
         qr.addData(texto);
         qr.make();
-        return qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+        const n = qr.getModuleCount();
+        const margem = 2;
+        const tam = n + margem * 2;
+        let d = '';
+        for (let r = 0; r < n; r++) {
+          for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += `M${c + margem},${r + margem}h1v1h-1z`;
+        }
+        return { tam, d };
       } catch (e) {
         log('falha ao gerar QR', e);
         return null;
       }
+    }
+    function svgQr({ tam, d }) {
+      const svg = document.createElementNS(SVG_NS, 'svg');
+      svg.setAttribute('viewBox', `0 0 ${tam} ${tam}`);
+      svg.setAttribute('preserveAspectRatio', 'xMinYMin meet');
+      svg.setAttribute('shape-rendering', 'crispEdges');
+      svg.setAttribute('aria-hidden', 'true');
+      const fundo = document.createElementNS(SVG_NS, 'rect');
+      fundo.setAttribute('width', String(tam));
+      fundo.setAttribute('height', String(tam));
+      fundo.setAttribute('fill', '#fff');
+      const p = document.createElementNS(SVG_NS, 'path');
+      p.setAttribute('d', d);
+      p.setAttribute('fill', '#000');
+      svg.append(fundo, p);
+      return svg;
     }
 
     // Só regenera o QR se a URL mudar.
@@ -163,10 +194,10 @@
       for (const a of alvos) {
         if (a.dataset.pronto === '1') continue;
         a.dataset.pronto = '1';
+        a.textContent = '';
         if (ultimoQrSvg) {
-          a.innerHTML = ultimoQrSvg; // SVG gerado localmente pela lib, sem conteúdo externo
+          a.appendChild(svgQr(ultimoQrSvg));
         } else {
-          a.textContent = '';
           const s = document.createElement('span');
           s.className = 'vazio';
           s.textContent = urlSala ? 'QR indisponível' : modelo.TEXTOS.conectando;

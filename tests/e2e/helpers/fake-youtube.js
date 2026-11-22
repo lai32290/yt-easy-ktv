@@ -126,7 +126,11 @@ export async function instalarYoutubeFalso(context) {
     const req = route.request();
     const u = new URL(req.url());
     const doSw = !!req.serviceWorker();
-    const html = (body, status = 200) => route.fulfill({ status, contentType: 'text/html; charset=utf-8', body });
+    // Como o youtube.com real: página com Trusted Types obrigatório (o painel não usa innerHTML).
+    const html = (body, status = 200) => route.fulfill({
+      status, contentType: 'text/html; charset=utf-8', body,
+      headers: { 'content-security-policy': "require-trusted-types-for 'script'" },
+    });
     switch (u.pathname) {
       case '/':
         ctl.pedidos.push({ tipo: 'home', url: req.url(), doSw });

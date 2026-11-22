@@ -27,10 +27,14 @@ test('a) ícone abre a janela KTV com botão Iniciar e QR da sala', { timeout: 1
   // O QR é exatamente o da URL exibida (gerado com a mesma lib, no Node).
   const qr = qrcode(0, 'M');
   qr.addData(p.url); qr.make();
-  const esperado = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
-  const dados = (svg) => /<path[^>]* d="([^"]+)"/.exec(svg)?.[1];
-  assert.ok(dados(esperado), 'não achei o path do QR esperado');
-  assert.equal(dados(p.qrGrande), dados(esperado), 'o QR do painel não é o da URL exibida');
+  // O painel desenha cada módulo escuro como `M{x},{y}h1v1h-1z` (margem de 2 módulos).
+  const d = /<path[^>]* d="([^"]+)"/.exec(p.qrGrande)?.[1] || '';
+  const escuros = new Set([...d.matchAll(/M(\d+),(\d+)/g)].map((m) => `${m[2] - 2},${m[1] - 2}`));
+  const esperado = new Set();
+  const n = qr.getModuleCount();
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) esperado.add(`${r},${c}`);
+  assert.ok(esperado.size > 0, 'QR esperado vazio');
+  assert.deepEqual(escuros, esperado, 'o QR do painel não é o da URL exibida');
 
   // Clicar o ícone de novo não abre uma segunda janela: foca a existente.
   const sw = await amb.sw();
