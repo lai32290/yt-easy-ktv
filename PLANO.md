@@ -9,10 +9,10 @@ Legenda: `[ ]` pendente · **[VALIDAR]** = ponto incerto que exige teste real no
 ## M0 — Preparação do repositório
 
 - [ ] **T0.1 Estrutura de pastas.** Criar `extension/src/{background,offscreen,content,shared}`, `extension/vendor`, `web/vendor`. Entrega: árvore igual à seção 4 do handoff, com arquivos vazios/placeholder.
-- [ ] **T0.2 `.gitignore` e README mínimo.** Ignorar `node_modules`, `dist`. README com 3 linhas: o que é, como carregar a extensão, onde fica o site. Dep: T0.1.
-- [ ] **T0.3 Baixar libs para `vendor/`.** `peerjs.min.js` (extensão e `web/`) e lib de QR (ex.: `qrcode-generator`, sem dependências). Fixar versão e anotar no README (`vendor/VERSIONS.md`). Nada carregado de CDN em runtime. Dep: T0.1.
+- [x] **T0.2 `.gitignore` e README mínimo.** Ignorar `node_modules`, `dist`. README com 3 linhas: o que é, como carregar a extensão, onde fica o site. Dep: T0.1.
+- [x] **T0.3 Baixar libs para `vendor/`.** `peerjs.min.js` (extensão e `web/`) e lib de QR (ex.: `qrcode-generator`, sem dependências). Fixar versão e anotar no README (`vendor/VERSIONS.md`). Nada carregado de CDN em runtime. Dep: T0.1.
 - [ ] **T0.4 Definir `shared/protocol.js`.** Constantes dos tipos de mensagem (`hello`, `state`, `search`, `results`, `add`, `remove`, `skip`, `move`, `error` + internas `play`, `ended`, `playerError`), formato do `Item` e códigos de erro. Entrega: um único arquivo importado por todos. Dep: T0.1.
-- [ ] **T0.5 Decidir build.** Começar **sem bundler** (ES modules). Só adotar esbuild se T0.3/T1.x exigirem. Registrar a decisão no README.
+- [x] **T0.5 Decidir build.** Começar **sem bundler** (ES modules). Só adotar esbuild se T0.3/T1.x exigirem. Registrar a decisão no README.
 
 ---
 
@@ -98,11 +98,11 @@ Legenda: `[ ]` pendente · **[VALIDAR]** = ponto incerto que exige teste real no
 
 ## M6 — Implantação (publicar o que o usuário final usa)
 
-- [ ] **D1 Publicar o site do celular.** GitHub Pages (padrão) servindo `web/` (via Action ou pasta `docs/`). Confirmar HTTPS e que o `#sala=` abre. Dep: M1 pronto.
+- [~] **D1 Publicar o site do celular.** (workflow criado em `.github/workflows/pages.yml`, falta habilitar Pages) GitHub Pages (padrão) servindo `web/` (via Action ou pasta `docs/`). Confirmar HTTPS e que o `#sala=` abre. Dep: M1 pronto.
 - [ ] **D2 Apontar a extensão para o site publicado.** Atualizar a constante do host (T4.1) para a URL do Pages. Dep: D1.
-- [ ] **D3 Empacotar a extensão.** Gerar `ktv-extension.zip` (conteúdo de `extension/`, sem arquivos de dev). Dep: M5.
-- [ ] **D4 Guia de instalação (pt-BR).** Passo a passo curto: baixar zip → extrair → `chrome://extensions` → modo desenvolvedor → "Carregar sem compactação" → abrir janela KTV → escanear QR. Dep: D3.
-- [ ] **D5 Aviso de limitações no guia.** Wi-Fi com isolamento de clientes bloqueia P2P; manter a janela do player visível; servidor PeerJS público sem garantia. Dep: D4.
+- [x] **D3 Empacotar a extensão.** Gerar `ktv-extension.zip` (conteúdo de `extension/`, sem arquivos de dev). Dep: M5.
+- [x] **D4 Guia de instalação (pt-BR).** Passo a passo curto: baixar zip → extrair → `chrome://extensions` → modo desenvolvedor → "Carregar sem compactação" → abrir janela KTV → escanear QR. Dep: D3.
+- [x] **D5 Aviso de limitações no guia.** Wi-Fi com isolamento de clientes bloqueia P2P; manter a janela do player visível; servidor PeerJS público sem garantia. Dep: D4.
 - [ ] **D6 Teste de ponta a ponta em máquina limpa.** Perfil novo do Chrome, 2 celulares reais no mesmo Wi-Fi, sessão de 30 min. Dep: D2, D3.
 - [ ] **D7 Release.** Tag `v0.1.0` com o zip anexado. Dep: D6.
 

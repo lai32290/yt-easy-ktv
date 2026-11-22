@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark light">
+  <title>KTV - Fila de karaokê</title>
+  <link rel="stylesheet" href="./style.css">
+  <!-- PeerJS local (global Peer), carregado antes do módulo -->
+  <script src="./vendor/peerjs.min.js"></script>
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <!-- Sem sala no hash -->
+  <main id="no-room" class="center-screen" data-testid="no-room" hidden>
+    <div class="big-icon" aria-hidden="true">&#128247;</div>
+    <h1>Escaneie o QR code na tela do KTV</h1>
+    <p>Abra a câmera do celular e aponte para o QR code mostrado na janela do karaokê.</p>
+  </main>
+
+  <!-- App principal -->
+  <div id="app" hidden>
+    <header class="topbar">
+      <div class="topbar-row">
+        <span class="brand">KTV</span>
+        <div class="status-wrap">
+          <span class="dot" id="status-dot" aria-hidden="true"></span>
+          <span id="status" data-testid="status" data-state="conectando" role="status" aria-live="polite">Conectando…</span>
+        </div>
+        <button type="button" id="reconnect-btn" class="btn btn-small" data-testid="reconnect-btn" hidden>Reconectar</button>
+      </div>
+      <div class="topbar-row sub">
+        <span id="status-detail" class="muted"></span>
+        <button type="button" id="rename-btn" class="link-btn" hidden>Alterar nome</button>
+      </div>
+    </header>
+
+    <!-- Pergunta o nome na primeira vez -->
+    <form id="name-form" class="name-overlay" hidden>
+      <div class="name-card">
+        <h2>Qual é o seu nome?</h2>
+        <p class="muted">Ele aparece ao lado das músicas que você pedir.</p>
+        <input id="name-input" data-testid="name-input" type="text" maxlength="30" autocomplete="nickname"
+               placeholder="Seu nome" aria-label="Seu nome" enterkeyhint="done">
+        <button type="submit" id="name-submit" data-testid="name-submit" class="btn btn-primary">Entrar</button>
+      </div>
+    </form>
+
+    <main class="content">
+      <!-- Fila -->
+      <section id="panel-fila" class="panel" role="tabpanel" aria-labelledby="tab-fila">
+        <h2 class="section-title">Tocando agora</h2>
+        <div id="now-playing" class="card now" data-testid="now-playing"></div>
+        <div class="section-head">
+          <h2 class="section-title">Próximas <span id="queue-count" class="muted"></span></h2>
+        </div>
+        <ul id="queue-list" class="list"></ul>
+        <p id="queue-empty" class="empty" hidden>A fila está vazia. Use <b>Buscar</b> ou <b>Colar link</b> para adicionar uma música.</p>
+      </section>
+
+      <!-- Buscar -->
+      <section id="panel-buscar" class="panel" role="tabpanel" aria-labelledby="tab-buscar" hidden>
+        <form id="search-form" class="search-form" role="search">
+          <div class="row">
+            <input id="search-input" data-testid="search-input" type="search" placeholder="Nome da música ou cantor"
+                   aria-label="Buscar música" autocomplete="off" enterkeyhint="search">
+            <button type="submit" id="search-btn" data-testid="search-btn" class="btn btn-primary">Buscar</button>
+          </div>
+          <label class="check">
+            <input type="checkbox" id="karaoke-check" checked>
+            <span>Adicionar "karaokê" à busca</span>
+          </label>
+        </form>
+        <p id="search-status" class="empty" hidden></p>
+        <ul id="results-list" class="list"></ul>
+      </section>
+
+      <!-- Colar link -->
+      <section id="panel-link" class="panel" role="tabpanel" aria-labelledby="tab-link" hidden>
+        <form id="link-form" class="search-form">
+          <label for="link-input" class="muted">Cole o link de um vídeo do YouTube</label>
+          <input id="link-input" data-testid="link-input" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=…"
+                 autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button type="submit" id="link-add" data-testid="link-add" class="btn btn-primary">Adicionar à fila</button>
+        </form>
+      </section>
+    </main>
+
+    <nav class="tabbar" role="tablist" aria-label="Seções">
+      <button type="button" role="tab" id="tab-fila" data-testid="tab-fila" class="tab" aria-selected="true"><span class="tab-ico" aria-hidden="true">&#127908;</span><span>Fila</span></button>
+      <button type="button" role="tab" id="tab-buscar" data-testid="tab-buscar" class="tab" aria-selected="false"><span class="tab-ico" aria-hidden="true">&#128269;</span><span>Buscar</span></button>
+      <button type="button" role="tab" id="tab-link" data-testid="tab-link" class="tab" aria-selected="false"><span class="tab-ico" aria-hidden="true">&#128279;</span><span>Colar link</span></button>
+    </nav>
+
+    <div id="toast-area" class="toast-area" aria-live="assertive">
+      <div id="error-toast" data-testid="error-toast" class="toast toast-error" role="alert" hidden></div>
+      <div id="info-toast" class="toast toast-ok" role="status" hidden></div>
+    </div>
+  </div>
+
+  <noscript><p class="empty">Ative o JavaScript para usar o KTV.</p></noscript>
+</body>
+</html>
