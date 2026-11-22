@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  criarEstado, enqueue, remove, avancar, mover, publico,
+  criarEstado, enqueue, enqueueProximo, remove, avancar, mover, publico,
 } from '../../extension/src/background/queue.js';
 
 const item = (n, pid = 'p1') => ({
@@ -91,4 +91,29 @@ test('mover: erros', () => {
 test('publico: só atual, fila e tocando', () => {
   const e = { roomId: 'abc', fila: [item(1)], atual: null, tocando: false };
   assert.deepEqual(publico(e), { atual: null, fila: [item(1)], tocando: false });
+});
+
+test('enqueueProximo: fura a fila, mas respeita a ordem entre os 插播', () => {
+  let e = criarEstado();
+  for (const n of [1, 2]) e = enqueue(e, item(n)).estado;
+  e = enqueueProximo(e, item(3)).estado;
+  e = enqueueProximo(e, item(4)).estado;
+  assert.deepEqual(e.fila.map((i) => i.itemId), ['i3', 'i4', 'i1', 'i2']);
+  assert.deepEqual(e.fila.map((i) => !!i.furou), [true, true, false, false]);
+});
+
+test('enqueueProximo: fila vazia e não muta o original', () => {
+  const vazio = criarEstado();
+  const { estado } = enqueueProximo(vazio, item(1));
+  assert.equal(estado.fila.length, 1);
+  assert.equal(vazio.fila.length, 0);
+});
+
+test('mover: tirar um 插播 do lugar limpa a marca', () => {
+  let e = criarEstado();
+  for (const n of [1, 2]) e = enqueue(e, item(n)).estado;
+  e = enqueueProximo(e, item(3)).estado;
+  e = mover(e, 'i3', 2).estado;
+  assert.deepEqual(e.fila.map((i) => i.itemId), ['i1', 'i2', 'i3']);
+  assert.ok(e.fila.every((i) => !i.furou));
 });

@@ -51,6 +51,7 @@ Preparação: Chrome 116+ com a extensão carregada (modo desenvolvedor), um per
 - [ ] **Colar link:** `youtu.be/ID`, `youtube.com/watch?v=ID&list=...` (a lista é ignorada), `youtube.com/shorts/ID`, `music.youtube.com/watch?v=ID`. Todos entram. Link de outro site ou texto qualquer: "Link inválido…".
 - [ ] **Duplicata:** o mesmo vídeo duas vezes (por formatos de link diferentes) é recusado com "Essa música já está na fila.".
 - [ ] **Dois celulares:** veem a **mesma fila** ao mesmo tempo; o botão "Remover" aparece só nos itens de cada um; "Pular" aparece para todos.
+- [ ] **插播 (furar a fila):** com 2+ músicas na fila, toque em "Tocar a seguir" num resultado da busca (ou na aba Colar link): a música entra no topo da fila com o selo 插播, logo depois da atual. Um segundo 插播 fica **depois** do primeiro. "Passar pra frente" num item da fila o move para o topo (sem o selo). Fila vazia: toca direto, igual a "Adicionar".
 - [ ] Nome com acentos/emoji e nome muito longo (máx. 30) aparecem corretamente em "pedido por".
 
 ## 5. Robustez

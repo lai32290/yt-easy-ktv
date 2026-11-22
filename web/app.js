@@ -294,16 +294,29 @@ function renderFila() {
   $('queue-count').textContent = fila.length ? `(${fila.length})` : '';
   $('queue-empty').hidden = !st || fila.length > 0;
 
-  for (const it of fila) {
+  fila.forEach((it, i) => {
     const li = el('li', 'item');
     li.setAttribute('data-testid', 'queue-item');
     li.dataset.itemId = it.itemId;
     li.append(thumb(it.videoId));
     const info = el('div', 'info');
-    info.append(el('span', 'title', it.titulo || 'Sem título'));
+    const titulo = el('span', 'title', it.titulo || 'Sem título');
+    if (it.furou) {
+      const selo = el('span', 'badge', '插播');
+      selo.setAttribute('data-testid', 'furou-badge');
+      titulo.prepend(selo, ' ');
+    }
+    info.append(titulo);
     if (it.canal) info.append(el('span', 'meta', it.canal));
     info.append(el('span', 'meta', 'pedido por ' + (it.pedidoPor || 'alguém')));
     li.append(info);
+    if (i > 0) {
+      const fr = el('button', 'btn btn-small', 'Passar pra frente');
+      fr.type = 'button';
+      fr.setAttribute('data-testid', 'move-front-btn');
+      fr.addEventListener('click', () => enviar({ t: C2E.MOVE, itemId: it.itemId, toIndex: 0 }));
+      li.append(fr);
+    }
     if (podeRemover(it, meuPid)) {
       const rm = el('button', 'btn btn-small btn-danger', 'Remover');
       rm.type = 'button';
@@ -312,7 +325,7 @@ function renderFila() {
       li.append(rm);
     }
     lista.append(li);
-  }
+  });
 }
 
 // ---------- Controle do player ----------
@@ -343,6 +356,7 @@ function ligarControle() {
   $('ctl-forward').addEventListener('click', () => controlar('forward'));
   $('ctl-voldown').addEventListener('click', () => controlar('volDown'));
   $('ctl-volup').addEventListener('click', () => controlar('volUp'));
+  $('ctl-fullscreen').addEventListener('click', () => controlar('fullscreen'));
   $('ctl-skip').addEventListener('click', () => {
     const a = lastState && lastState.atual;
     if (a && podePular(CONFIG.SKIP_POLICY)) enviar({ t: C2E.SKIP, itemId: a.itemId });
@@ -356,7 +370,6 @@ function buscar() {
   if (!q) return;
   const id = `${meuPid.slice(0, 6)}-${Date.now().toString(36)}-${++buscaSeq}`;
   ultimaBuscaId = id;
-  $('ctl-fullscreen').addEventListener('click', () => controlar('fullscreen'));
   buscaEstado = 'carregando';
   resultados = [];
   renderResultados();
@@ -364,8 +377,8 @@ function buscar() {
   if (!ok) { buscaEstado = 'erro'; buscaMsg = 'Sem conexão com o KTV.'; renderResultados(); }
 }
 
-function adicionar(videoId, btn) {
-  if (!enviar({ t: C2E.ADD, videoId })) return;
+function adicionar(videoId, btn, proximo = false) {
+  if (!enviar(proximo ? { t: C2E.ADD, videoId, proximo: true } : { t: C2E.ADD, videoId })) return;
   pendentes.add(videoId);
   marcarAguardando();
   if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
@@ -409,6 +422,12 @@ function renderResultados() {
     b.disabled = enviado;
     if (!b.disabled) b.addEventListener('click', () => adicionar(r.videoId, b));
     li.append(b);
+    const bp = el('button', 'btn btn-small', 'Tocar a seguir');
+    bp.type = 'button';
+    bp.setAttribute('data-testid', 'play-next-btn');
+    bp.disabled = enviado;
+    if (!bp.disabled) bp.addEventListener('click', () => adicionar(r.videoId, bp, true));
+    li.append(bp);
     lista.append(li);
   }
 }
@@ -490,16 +509,17 @@ function iniciar() {
     if ($('search-input').value.trim().length >= 3) debounceTimer = setTimeout(buscar, 700);
   });
 
-  $('link-form').addEventListener('submit', (e) => {
-    e.preventDefault();
+  const enviarLink = (proximo) => {
     const url = $('link-input').value.trim();
     if (!url) return;
-    if (enviar({ t: C2E.ADD, url })) {
+    if (enviar(proximo ? { t: C2E.ADD, url, proximo: true } : { t: C2E.ADD, url })) {
       $('link-input').value = '';
       marcarAguardando();
       toastOk('Enviando…');
     }
-  });
+  };
+  $('link-form').addEventListener('submit', (e) => { e.preventDefault(); enviarLink(false); });
+  $('link-next').addEventListener('click', () => enviarLink(true));
 
   $('link-clipboard').addEventListener('click', async () => {
     let texto = '';

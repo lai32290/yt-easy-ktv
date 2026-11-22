@@ -18,6 +18,15 @@ export function enqueue(estado, item) {
   return { estado: { ...estado, fila: [...estado.fila, item] } };
 }
 
+// 插播: entra na frente da fila, mas depois dos outros 插播 que já esperam (FIFO dentro do bloco).
+export function enqueueProximo(estado, item) {
+  let pos = 0;
+  while (pos < estado.fila.length && estado.fila[pos].furou) pos++;
+  const fila = estado.fila.slice();
+  fila.splice(pos, 0, { ...item, furou: true });
+  return { estado: { ...estado, fila } };
+}
+
 // Só o dono (mesmo pid) remove o item. A música atual não está na fila (use skip).
 export function remove(estado, itemId, pid) {
   const idx = estado.fila.findIndex((i) => i.itemId === itemId);
@@ -42,7 +51,9 @@ export function mover(estado, itemId, toIndex) {
   const destino = Math.max(0, Math.min(estado.fila.length - 1, toIndex));
   const fila = estado.fila.slice();
   const [item] = fila.splice(idx, 1);
-  fila.splice(destino, 0, item);
+  // Movido à mão: sai do bloco de 插播 (senão bagunçaria a ordem FIFO dele).
+  const { furou, ...semMarca } = item;
+  fila.splice(destino, 0, semMarca);
   return { estado: { ...estado, fila } };
 }
 

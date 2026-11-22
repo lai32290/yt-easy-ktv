@@ -19,7 +19,7 @@ export const CONFIG = {
 export const C2E = {
   HELLO: 'hello',   // { nome, pid }   pid = id estável do participante (localStorage)
   SEARCH: 'search', // { id, q, karaoke? }  karaoke=false desliga o sufixo
-  ADD: 'add',       // { videoId } | { url }
+  ADD: 'add',       // { videoId } | { url }, + { proximo: true } = 插播 (entra na frente da fila)
   REMOVE: 'remove', // { itemId }
   SKIP: 'skip',     // { itemId? }  itemId = música que o celular quer pular (pulo repetido/atrasado é ignorado)
   MOVE: 'move',     // { itemId, toIndex }  (opcional)
@@ -92,7 +92,8 @@ export const ERR_TEXT = {
 
 /**
  * Item da fila:
- * { itemId, videoId, titulo, canal, duracao, pedidoPor, pid, addedAt }
+ * { itemId, videoId, titulo, canal, duracao, pedidoPor, pid, addedAt, furou? }
+ *   furou = true só enquanto o item está no bloco de 插播 no início da fila (ausente caso contrário)
  *   pid = id estável do participante que pediu (para "remover o próprio item")
  */
 export const thumbUrl = (videoId) => `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;

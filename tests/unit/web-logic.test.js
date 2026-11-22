@@ -111,3 +111,11 @@ test('linkDaAreaDeTransferencia pega o primeiro link do texto copiado', () => {
   assert.equal(linkDaAreaDeTransferencia('   '), '');
   assert.equal(linkDaAreaDeTransferencia(null), '');
 });
+
+test('normalizarState preserva furou só quando é true', () => {
+  const base = { itemId: 'a', videoId: 'v', titulo: 't', pedidoPor: 'x', pid: 'p' };
+  const s = normalizarState({ fila: [{ ...base, furou: true }, { ...base, itemId: 'b', furou: 'sim' }, { ...base, itemId: 'c' }] });
+  assert.equal(s.fila[0].furou, true);
+  assert.ok(!('furou' in s.fila[1]));
+  assert.ok(!('furou' in s.fila[2]));
+});

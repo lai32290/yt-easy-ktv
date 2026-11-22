@@ -73,7 +73,7 @@ const str = (v, max = 300) => (typeof v === 'string' ? v.slice(0, max) : typeof 
 /** Normaliza um Item vindo da rede (só strings). */
 export function normalizarItem(it) {
   if (!it || typeof it !== 'object') return null;
-  return {
+  const base = {
     itemId: str(it.itemId, 100),
     videoId: str(it.videoId, 32),
     titulo: str(it.titulo),
@@ -82,6 +82,8 @@ export function normalizarItem(it) {
     pedidoPor: str(it.pedidoPor, 60),
     pid: str(it.pid, 100),
   };
+  if (it.furou === true) base.furou = true;
+  return base;
 }
 
 /** Normaliza o `state` recebido. */

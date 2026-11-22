@@ -14,7 +14,7 @@ import {
   CONFIG, C2E, E2C, INT, TARGET, ERR, ERR_TEXT, ACOES_CONTROLE,
 } from '../shared/protocol.js';
 import {
-  criarEstado, enqueue, remove, avancar, mover, publico,
+  criarEstado, enqueue, enqueueProximo, remove, avancar, mover, publico,
 } from './queue.js';
 import { parseUrl } from './url.js';
 
@@ -280,6 +280,7 @@ export function criarNucleo(deps) {
         else if (typeof msg.url === 'string') videoId = parseUrl(msg.url);
         else return erroPara(ERR.MSG_INVALIDA);
         if (!videoId) return erroPara(ERR.LINK_INVALIDO);
+        if (msg.proximo != null && typeof msg.proximo !== 'boolean') return erroPara(ERR.MSG_INVALIDA);
 
         let meta;
         try {
@@ -294,7 +295,7 @@ export function criarNucleo(deps) {
             itemId: uuid(), videoId, titulo: meta.titulo, canal: meta.canal || '', duracao: meta.duracao || '',
             pedidoPor: nome, pid, addedAt: now(),
           };
-          const r = enqueue(estado, item);
+          const r = (msg.proximo ? enqueueProximo : enqueue)(estado, item);
           if (r.erro) return erroPara(r.erro);
           estado = r.estado;
           const ocioso = !estado.atual && rt.started;
