@@ -14,7 +14,7 @@ Preparação: Chrome 116+ com a extensão carregada (modo desenvolvedor), um per
 
 ## 1. Abrir a janela KTV e liberar o som
 
-- [ ] Clique no ícone da extensão: abre **uma** janela do YouTube (`?ktv=1`) com o painel (QR grande + "Iniciar KTV"). Clicar no ícone de novo apenas foca a janela.
+- [ ] Clique no ícone da extensão: abre **uma** janela do YouTube (`?ktv=1`) com o painel (QR grande + "Iniciar KTV"). Clicar no ícone de novo apenas foca a janela. Clicando no ícone numa aba comum do YouTube **que já tem fila** (e sem janela KTV aberta), essa aba vira a aba KTV com a fila mantida e o botão "Iniciar KTV" de volta.
 - [ ] Uma aba normal do YouTube aberta ao mesmo tempo **não** mostra painel nem é controlada.
 - [ ] Clique em **Iniciar KTV**: o painel muda para o modo "fila vazia" (QR grande, instrução em pt-BR, "Nenhum celular conectado").
 - [ ] **[VALIDAR] Som sem novo clique:** depois de Iniciar, peça uma música pelo celular. Ela deve **tocar com som**, sem você clicar de novo no PC. Se aparecer o botão **▶ Tocar**, o Chrome barrou o autoplay: anote em que situação (primeira música? depois de recarregar?).
@@ -64,4 +64,4 @@ Preparação: Chrome 116+ com a extensão carregada (modo desenvolvedor), um per
 
 ## O que os testes automatizados já cobrem (não precisa repetir à mão)
 
-Abertura da janela KTV e QR (conteúdo e URL `#sala=`), conexão do celular por `#sala=`, nome/`hello`/`state`, busca e adição (fixtures `videoRenderer` e `lockupViewModel`), links (`youtu.be`, `watch?v=&list=`, `shorts`), duplicata, fila compartilhada em tempo real, remover só o próprio item, pular, avanço automático com contenção do autoplay (SPA e recarga completa), modo ocioso, vídeo indisponível, parada/reinício do service worker, perda do offscreen, reabertura do site, queda/volta da sinalização e o contrato de mensagens. O que **não** dá para provar com o YouTube falso é o comportamento real do player, dos anúncios, do consentimento e da CSP do YouTube; nem a rede/hardware reais (Wi-Fi, iOS, NAT).
+Abertura da janela KTV e QR (conteúdo e URL `#sala=`), conexão do celular por `#sala=`, nome/`hello`/`state`, busca e adição (fixtures `videoRenderer` e `lockupViewModel`), links (`youtu.be`, `watch?v=&list=`, `shorts`), adicionar o mesmo vídeo de novo, fila compartilhada em tempo real, remover só o próprio item, pular, avanço automático com contenção do autoplay (SPA e recarga completa), modo ocioso, vídeo indisponível, parada/reinício do service worker, perda do offscreen, reabertura do site, queda/volta da sinalização e o contrato de mensagens. O que **não** dá para provar com o YouTube falso é o comportamento real do player, dos anúncios, do consentimento e da CSP do YouTube; nem a rede/hardware reais (Wi-Fi, iOS, NAT).

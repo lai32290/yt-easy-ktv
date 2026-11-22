@@ -56,8 +56,8 @@ test('podePular segue a política', () => {
 });
 
 test('textoErro: msg tem prioridade, senão tabela', () => {
-  assert.equal(textoErro({ codigo: ERR.DUPLICADO, msg: 'Já tem!' }, ERR_TEXT), 'Já tem!');
-  assert.equal(textoErro({ codigo: ERR.DUPLICADO, msg: '' }, ERR_TEXT), ERR_TEXT[ERR.DUPLICADO]);
+  assert.equal(textoErro({ codigo: ERR.NAO_ENCONTRADO, msg: 'Já tem!' }, ERR_TEXT), 'Já tem!');
+  assert.equal(textoErro({ codigo: ERR.NAO_ENCONTRADO, msg: '' }, ERR_TEXT), ERR_TEXT[ERR.NAO_ENCONTRADO]);
   assert.match(textoErro({ codigo: 'zzz' }, ERR_TEXT), /Algo deu errado/);
   assert.match(textoErro(null, ERR_TEXT), /Algo deu errado/);
 });
