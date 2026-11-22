@@ -34,7 +34,10 @@
       </div>
       <div class="topbar-row sub">
         <span id="status-detail" class="muted"></span>
-        <button type="button" id="rename-btn" class="link-btn" hidden>Alterar nome</button>
+        <span class="sub-actions">
+          <button type="button" id="invite-btn" class="link-btn" data-testid="invite-btn">Convidar (QR)</button>
+          <button type="button" id="rename-btn" class="link-btn" hidden>Alterar nome</button>
+        </span>
       </div>
     </header>
 
@@ -48,6 +51,16 @@
         <button type="submit" id="name-submit" data-testid="name-submit" class="btn btn-primary">Entrar</button>
       </div>
     </form>
+
+    <!-- QR da sala para outras pessoas entrarem (não interfere na tela do KTV) -->
+    <div id="invite" class="name-overlay" data-testid="invite" role="dialog" aria-modal="true" aria-labelledby="invite-title" hidden>
+      <div class="name-card invite-card">
+        <h2 id="invite-title">Convidar para a sala</h2>
+        <p class="muted">Peça para a outra pessoa apontar a câmera do celular para este QR code.</p>
+        <div id="invite-qr" class="invite-qr" data-testid="invite-qr" role="img" aria-label="QR Code para entrar na sala"></div>
+        <button type="button" id="invite-close" class="btn btn-primary">Fechar</button>
+      </div>
+    </div>
 
     <main class="content">
       <!-- Fila -->

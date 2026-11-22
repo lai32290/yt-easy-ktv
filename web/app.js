@@ -5,6 +5,7 @@ import {
   parseHash, resolverSinalizacao, backoffDelay, podeRemover, podePular, textoErro,
   resultadoVale, normalizarState, idsNoEstado, normalizarResultados, erroSoDeSinalizacao,
 } from './logic.js';
+import { qrDados, qrSvg } from './qr.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -390,6 +391,15 @@ function mostrarNome(sim) {
   $('rename-btn').hidden = sim || !nome;
 }
 
+function mostrarConvite(sim) {
+  if (sim) {
+    const dados = qrDados(location.href);
+    $('invite-qr').replaceChildren(dados ? qrSvg(dados) : el('p', 'muted', 'QR indisponível'));
+  }
+  $('invite').hidden = !sim;
+  (sim ? $('invite-close') : $('invite-btn')).focus();
+}
+
 function salvarNome(e) {
   e.preventDefault();
   const v = $('name-input').value.trim().slice(0, 30);
@@ -426,6 +436,10 @@ function iniciar() {
   for (const a of ABAS) $('tab-' + a).addEventListener('click', () => mostrarAba(a));
   $('name-form').addEventListener('submit', salvarNome);
   $('rename-btn').addEventListener('click', () => mostrarNome(true));
+  $('invite-btn').addEventListener('click', () => mostrarConvite(true));
+  $('invite-close').addEventListener('click', () => mostrarConvite(false));
+  $('invite').addEventListener('click', (e) => { if (e.target === $('invite')) mostrarConvite(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('invite').hidden) mostrarConvite(false); });
   $('reconnect-btn').addEventListener('click', reconectarManual);
 
   $('search-form').addEventListener('submit', (e) => { e.preventDefault(); buscar(); });

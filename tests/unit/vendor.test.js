@@ -35,3 +35,11 @@ test('qrcode.js (ESM) gera SVG para a URL da sala', async () => {
   assert.match(svg, /<\/svg>$/);
   assert.ok(qr.getModuleCount() >= 21);
 });
+
+test('web/vendor/qrcode.js é idêntico ao da extensão e web/qr.js gera os dados do QR', async () => {
+  assert.equal(readFileSync(join(raiz, 'web/vendor/qrcode.js'), 'utf8'), readFileSync(join(raiz, 'extension/vendor/qrcode.js'), 'utf8'));
+  const { qrDados } = await import(pathToFileURL(join(raiz, 'web/qr.js')).href);
+  const dados = qrDados('https://exemplo.github.io/ktv/#sala=abc-123');
+  assert.ok(dados.tam > 20);
+  assert.match(dados.d, /^M\d+,\d+h1v1h-1z/);
+});
