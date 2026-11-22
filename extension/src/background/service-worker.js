@@ -26,9 +26,10 @@ async function ensureOffscreen() {
 }
 
 const janelas = {
+  // Sempre uma aba nova (na janela de quem clicou), em primeiro plano.
   async criar(url) {
-    const w = await chrome.windows.create({ url, type: 'normal' });
-    return { windowId: w.id, tabId: w.tabs?.[0]?.id ?? null };
+    const t = await chrome.tabs.create({ url, active: true });
+    return { windowId: t.windowId ?? null, tabId: t.id ?? null };
   },
   // Foca a janela/aba KTV existente; false se ela não existe mais.
   async focar(tabId, windowId) {
@@ -36,15 +37,6 @@ const janelas = {
       const aba = await chrome.tabs.get(tabId);
       await chrome.tabs.update(tabId, { active: true });
       await chrome.windows.update(aba.windowId ?? windowId, { focused: true });
-      return true;
-    } catch {
-      return false;
-    }
-  },
-  // Transforma uma aba existente em aba KTV (navega para a URL com o marcador); false se falhar.
-  async adotar(tabId, url) {
-    try {
-      await chrome.tabs.update(tabId, { url });
       return true;
     } catch {
       return false;
@@ -81,7 +73,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   return true; // resposta assíncrona (whoami)
 });
 
-chrome.action.onClicked.addListener((aba) => { nucleo.abrirKtv(aba).catch((e) => console.error('[KTV sw]', e)); });
+chrome.action.onClicked.addListener(() => { nucleo.abrirKtv().catch((e) => console.error('[KTV sw]', e)); });
 chrome.tabs.onRemoved.addListener((tabId) => { nucleo.abaFechada(tabId).catch(() => {}); });
 chrome.windows.onRemoved.addListener((windowId) => { nucleo.janelaFechada(windowId).catch(() => {}); });
 chrome.runtime.onStartup.addListener(() => { nucleo.navegadorIniciou().catch((e) => console.error('[KTV sw]', e)); });

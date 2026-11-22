@@ -6,8 +6,8 @@
 //   send(msg)              -> mensagem interna ao offscreen (devolve a resposta, se houver)
 //   sendToTab(tabId, msg)  -> mensagem ao content script da aba KTV
 //   ensureOffscreen()      -> garante o offscreen document
-//   janelas   { criar(url) -> {tabId, windowId}, focar(tabId, windowId) -> boolean, recarregar?(tabId) -> boolean,
-//               adotar?(tabId, url) -> boolean (navega uma aba existente para a URL KTV) }
+//   janelas   { criar(url) -> {tabId, windowId} (abre uma NOVA aba), focar(tabId, windowId) -> boolean,
+//               recarregar?(tabId) -> boolean }
 //   buscar(q, {karaoke}), oembed(videoId)
 //   now(), uuid(), sleep(ms), log(...)
 import {
@@ -139,24 +139,13 @@ export function criarNucleo(deps) {
   }
 
   // ---------- janela KTV ----------
-  // `aba` (opcional): a aba ativa quando o ícone foi clicado. Se for do YouTube, ainda não houver
-  // janela KTV viva e já existir fila, ela vira a aba KTV (a fila é mantida, nada é resetado).
-  async function abrirKtv(aba) {
+  // Clique no ícone: foca a aba KTV se ela já existe; senão abre uma NOVA aba KTV (a fila é mantida).
+  // Nunca usa a aba ativa do usuário: o KTV só controla a aba que ele mesmo abriu.
+  async function abrirKtv() {
     return travar(async () => {
       if (rt.ktvTabId != null) {
         const ok = await seguro(() => janelas.focar(rt.ktvTabId, rt.ktvWindowId));
         if (ok) return;
-      }
-      const temFila = !!(estado.atual || estado.fila.length > 0);
-      if (temFila && aba?.id != null && janelas.adotar && /^https:\/\/(www\.|m\.)?youtube\.com\//.test(aba.url || '')) {
-        const ok = await seguro(() => janelas.adotar(aba.id, `https://www.youtube.com/?${CONFIG.KTV_FLAG}=1`));
-        if (ok) {
-          rt.ktvTabId = aba.id;
-          rt.ktvWindowId = aba.windowId ?? null;
-          rt.started = false;
-          await salvarRt();
-          return;
-        }
       }
       const url = `https://www.youtube.com/?${CONFIG.KTV_FLAG}=1`;
       const r = await janelas.criar(url);

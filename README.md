@@ -5,7 +5,7 @@ Karaokê no YouTube: o PC toca os vídeos numa janela dedicada e os celulares da
 ## Arquitetura (resumo)
 
 1. **Extensão Chrome (MV3)** em `extension/`, sem bundler (ES modules); o usuário final não precisa de Node.
-2. **Service worker** (`src/background/`): fila, estado, busca, abre a janela KTV e persiste em `chrome.storage`.
+2. **Service worker** (`src/background/`): fila, estado, busca, abre a aba KTV e persiste em `chrome.storage`.
 3. **Offscreen document** (`src/offscreen/`): hospeda o PeerJS (WebRTC não roda no service worker) e cria a sala.
 4. **Content script** (`src/content/`): roda só na aba KTV do youtube.com; toca o vídeo, detecta o fim e mostra QR/fila num painel (shadow DOM).
 5. **Site do celular** em `web/` (HTML/JS estáticos, pt-BR): lê `#sala=ID` do link, conecta ao PC por PeerJS, busca/cola links e mostra a fila.
@@ -19,7 +19,7 @@ Decisão de build: **sem bundler**. Bibliotecas de terceiros ficam em `vendor/` 
 2. No Chrome, abra `chrome://extensions`.
 3. Ative o **Modo do desenvolvedor** (canto superior direito).
 4. Clique em **Carregar sem compactação** e escolha a pasta extraída (a que contém `manifest.json`).
-5. Clique no ícone da extensão **KTV YouTube** na barra do Chrome: abre a janela KTV do YouTube. Se você estiver numa aba do YouTube e já houver fila, essa aba vira a aba KTV e a fila é mantida.
+5. Clique no ícone da extensão **KTV YouTube** na barra do Chrome: abre **uma nova aba** KTV do YouTube (se ela já existir, só a foca). O KTV nunca assume a aba que você está usando.
 6. Na janela, clique em **Iniciar** (necessário para o Chrome liberar o som) e **escaneie o QR** com o celular, no mesmo Wi-Fi do PC.
 7. No celular, informe seu nome, busque uma música ou cole um link e adicione à fila.
 
@@ -50,7 +50,7 @@ O que sobe em cada teste (`tests/e2e/helpers/`):
 
 - Chromium (`--headless=new`, contexto persistente) com a extensão `extension/` carregada; o service worker é apontado para a sinalização local pela chave `ktv_signaling` (o SW reenvia `initPeer` quando ela muda). `0.peerjs.com` é bloqueado por DNS para nunca tocar a rede pública.
 - Servidor PeerJS local (`peer`, processo filho em `127.0.0.1`, porta livre) que o teste derruba/religa para simular queda.
-- **YouTube falso** via `context.route('https://www.youtube.com/**')` (inclui o `fetch` do service worker, com `PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1`): `/?ktv=1` e `/watch?v=ID` com `<ytd-app>`, `<video class="html5-main-video">` e um WAV curto gerado em memória; `/oembed`; `/results` (fixtures de `tests/fixtures/`); vídeos "indisponíveis" por ID (`.ytp-error`); navegação SPA pelo evento `yt-navigate` no `<ytd-app>` (um `<a>` comum recarrega a página, como no YouTube real) ou recarga completa; API de som do `#movie_player` (`getVolume`/`setVolume`/`isMuted`/`mute`/`unMute`, que reaplica o volume dela a cada vídeo); botão `.ytp-fullscreen-button`; e autoplay do "recomendado" ao terminar, para provar que o KTV o contém. Atenção: a primeira carga da janela KTV (`/?ktv=1`, aberta pelo `chrome.windows.create`) escapa do `context.route` e vem do youtube.com real, então os testes precisam de rede.
+- **YouTube falso** via `context.route('https://www.youtube.com/**')` (inclui o `fetch` do service worker, com `PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1`): `/?ktv=1` e `/watch?v=ID` com `<ytd-app>`, `<video class="html5-main-video">` e um WAV curto gerado em memória; `/oembed`; `/results` (fixtures de `tests/fixtures/`); vídeos "indisponíveis" por ID (`.ytp-error`); navegação SPA pelo evento `yt-navigate` no `<ytd-app>` (um `<a>` comum recarrega a página, como no YouTube real) ou recarga completa; API de som do `#movie_player` (`getVolume`/`setVolume`/`isMuted`/`mute`/`unMute`, que reaplica o volume dela a cada vídeo); botão `.ytp-fullscreen-button`; e autoplay do "recomendado" ao terminar, para provar que o KTV o contém. Atenção: a primeira carga da janela KTV (`/?ktv=1`, aberta pelo `chrome.tabs.create`) escapa do `context.route` e vem do youtube.com real, então os testes precisam de rede.
 - Site do celular (`web/`) servido por um HTTP estático local e aberto em **contextos isolados** de um segundo navegador (cada "celular" tem seu `localStorage`/`pid`) em `#sala=<ID>&sig=127.0.0.1:<porta>&secure=0`.
 
 Cenários (um arquivo por critério de aceite do MVP): `01` janela KTV/QR · `02` celular conecta · `03` busca, links e vídeo repetido · `04` fila com 2 celulares, remover só o dono, pular · `05` próxima música sozinha, autoplay contido, modo ocioso · `06` vídeo indisponível · `07` reinício do service worker e perda do offscreen · `08` reconexão do celular e queda da sinalização · `09` contrato de mensagens · `10` aba Controle do celular · `11` tela cheia entre músicas · `12` 插播 (furar a fila). O que não é automatizável (YouTube real, anúncios, iOS, Wi-Fi real) está em [`docs/TESTE-MANUAL.md`](docs/TESTE-MANUAL.md).

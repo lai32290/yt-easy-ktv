@@ -14,7 +14,7 @@ Preparação: Chrome 116+ com a extensão carregada (modo desenvolvedor), um per
 
 ## 1. Abrir a janela KTV e liberar o som
 
-- [ ] Clique no ícone da extensão: abre **uma** janela do YouTube (`?ktv=1`) com o painel (QR grande + "Iniciar KTV"). Clicar no ícone de novo apenas foca a janela. Clicando no ícone numa aba comum do YouTube **que já tem fila** (e sem janela KTV aberta), essa aba vira a aba KTV com a fila mantida e o botão "Iniciar KTV" de volta.
+- [ ] Clique no ícone da extensão: abre **uma nova aba** do YouTube (`?ktv=1`) com o painel (QR grande + "Iniciar KTV"). Clicar no ícone de novo apenas foca essa aba. Clicando no ícone com uma aba comum do YouTube ativa (com ou sem fila), a aba ativa **não é tocada nem controlada**: abre-se sempre uma aba KTV nova, com a fila mantida e o botão "Iniciar KTV" de volta.
 - [ ] Uma aba normal do YouTube aberta ao mesmo tempo **não** mostra painel nem é controlada.
 - [ ] Clique em **Iniciar KTV**: o painel muda para o modo "fila vazia" (QR grande, instrução em pt-BR, "Nenhum celular conectado").
 - [ ] **[VALIDAR] Som sem novo clique:** depois de Iniciar, peça uma música pelo celular. Ela deve **tocar com som**, sem você clicar de novo no PC. Se aparecer o botão **▶ Tocar**, o Chrome barrou o autoplay: anote em que situação (primeira música? depois de recarregar?).
@@ -60,9 +60,9 @@ Preparação: Chrome 116+ com a extensão carregada (modo desenvolvedor), um per
 - [ ] **Celular "fantasma":** tire o celular do Wi-Fi abruptamente (modo avião). O contador "N celulares conectados" no painel pode demorar para cair (o canal de dados só é dado como morto depois de um tempo; ao fechar a página normalmente cai na hora). Anote quanto demora.
 - [ ] **Recarregar a aba KTV (F5)** no meio de uma música: a fila e a música atual continuam; a música é retomada (talvez com o botão **▶ Tocar** se o Chrome barrar o som); os celulares seguem conectados.
 - [ ] **Recarregar a extensão** em `chrome://extensions` (botão ↻) no meio de uma sessão: a **fila e a sala** voltam (mesmo QR); a aba KTV é **recarregada sozinha** (para reinjetar o script; a música atual recomeça do início, talvez pedindo **▶ Tocar**) e os celulares reconectam sozinhos.
-- [ ] **Fechar e reabrir o Chrome** com fila pendente: nenhuma aba comum do YouTube vira "aba KTV" (os IDs de aba recomeçam a cada abertura do navegador). Clique no ícone: abre uma nova janela KTV com a fila mantida.
+- [ ] **Fechar e reabrir o Chrome** com fila pendente: nenhuma aba comum do YouTube vira "aba KTV" (os IDs de aba recomeçam a cada abertura do navegador). Clique no ícone: abre uma nova aba KTV com a fila mantida.
 - [ ] **Suspensão do service worker:** deixe a fila parada por 5+ minutos e peça uma música: deve ser processada normalmente (o SW acorda pelas mensagens do celular).
-- [ ] **Fechar a janela KTV** e clicar no ícone de novo: abre outra janela; a fila anterior é mantida e o botão **Iniciar KTV** reaparece.
+- [ ] **Fechar a aba KTV** e clicar no ícone de novo: abre outra aba; a fila anterior é mantida e o botão **Iniciar KTV** reaparece.
 - [ ] **Sessão longa (30 min, D6):** perfil limpo, 2 celulares reais, 8 a 10 músicas variadas. Anote travamentos, perdas de conexão e qualquer vídeo que não tocou.
 
 ## O que os testes automatizados já cobrem (não precisa repetir à mão)
