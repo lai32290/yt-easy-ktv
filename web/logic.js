@@ -88,7 +88,14 @@ export function normalizarItem(it) {
 export function normalizarState(msg) {
   const m = msg && typeof msg === 'object' ? msg : {};
   const fila = Array.isArray(m.fila) ? m.fila.slice(0, 500).map(normalizarItem).filter(Boolean) : [];
-  return { atual: normalizarItem(m.atual), fila, tocando: !!m.tocando };
+  const pl = m.player && typeof m.player === 'object' ? m.player : {};
+  const vol = Number(pl.volume);
+  const player = {
+    pausado: !!pl.pausado,
+    mudo: !!pl.mudo,
+    volume: Number.isFinite(vol) ? Math.max(0, Math.min(100, Math.round(vol))) : 100,
+  };
+  return { atual: normalizarItem(m.atual), fila, tocando: !!m.tocando, player };
 }
 
 /** Conjunto de videoIds presentes (atual + fila). */
@@ -98,6 +105,14 @@ export function idsNoEstado(state) {
   if (state.atual && state.atual.videoId) s.add(state.atual.videoId);
   for (const it of state.fila || []) if (it.videoId) s.add(it.videoId);
   return s;
+}
+
+/** Mensagem C2E.CONTROL para o botão de play/pausa e o de mudo, conforme o estado atual do player. */
+export function acaoPlayPausa(player) {
+  return player && player.pausado ? 'play' : 'pause';
+}
+export function acaoMudo(player) {
+  return player && player.mudo ? 'unmute' : 'mute';
 }
 
 /** Normaliza resultados de busca. */

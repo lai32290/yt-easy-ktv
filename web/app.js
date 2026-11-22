@@ -4,6 +4,7 @@ import { CONFIG, C2E, E2C, ERR_TEXT, thumbUrl } from './protocol.js';
 import {
   parseHash, resolverSinalizacao, backoffDelay, podeRemover, podePular, textoErro,
   resultadoVale, normalizarState, idsNoEstado, normalizarResultados, erroSoDeSinalizacao,
+  acaoPlayPausa, acaoMudo,
 } from './logic.js';
 
 const $ = (id) => document.getElementById(id);
@@ -231,6 +232,7 @@ function aoReceber(msg) {
     for (const id of [...pendentes]) if (agora.has(id)) pendentes.delete(id);
     renderFila();
     renderResultados();
+    renderControle();
   } else if (msg.t === E2C.RESULTS) {
     if (!resultadoVale(msg, ultimaBuscaId)) return; // resposta antiga
     resultados = normalizarResultados(msg.itens);
@@ -307,6 +309,40 @@ function renderFila() {
   }
 }
 
+// ---------- Controle do player ----------
+const PLAYER_PADRAO = { pausado: false, mudo: false, volume: 100 };
+
+function renderControle() {
+  const st = lastState;
+  const ativo = !!(st && st.atual);
+  const pl = (st && st.player) || PLAYER_PADRAO;
+  $('ctl-titulo').textContent = ativo ? st.atual.titulo || 'Sem título' : 'Nada tocando no momento.';
+  for (const b of $('ctl-grid').querySelectorAll('button')) b.disabled = !ativo;
+  $('ctl-playpause-txt').textContent = pl.pausado ? 'Tocar' : 'Pausar';
+  $('ctl-playpause-ico').textContent = pl.pausado ? '\u25B6' : '\u23F8';
+  $('ctl-mute-txt').textContent = pl.mudo ? 'Ativar som' : 'Mudo';
+  $('ctl-volume').textContent = ativo ? `Volume: ${pl.mudo ? 'mudo' : pl.volume + '%'}` : '';
+}
+
+function controlar(acao) {
+  enviar({ t: C2E.CONTROL, acao });
+}
+
+function ligarControle() {
+  const player = () => (lastState && lastState.player) || PLAYER_PADRAO;
+  $('ctl-playpause').addEventListener('click', () => controlar(acaoPlayPausa(player())));
+  $('ctl-mute').addEventListener('click', () => controlar(acaoMudo(player())));
+  $('ctl-restart').addEventListener('click', () => controlar('restart'));
+  $('ctl-back').addEventListener('click', () => controlar('back'));
+  $('ctl-forward').addEventListener('click', () => controlar('forward'));
+  $('ctl-voldown').addEventListener('click', () => controlar('volDown'));
+  $('ctl-volup').addEventListener('click', () => controlar('volUp'));
+  $('ctl-skip').addEventListener('click', () => {
+    const a = lastState && lastState.atual;
+    if (a && podePular(CONFIG.SKIP_POLICY)) enviar({ t: C2E.SKIP, itemId: a.itemId });
+  });
+}
+
 // ---------- Busca ----------
 function buscar() {
   clearTimeout(debounceTimer);
@@ -371,7 +407,7 @@ function renderResultados() {
 }
 
 // ---------- Abas ----------
-const ABAS = ['fila', 'buscar', 'link'];
+const ABAS = ['fila', 'buscar', 'link', 'controle'];
 function mostrarAba(nomeAba) {
   for (const a of ABAS) {
     $('panel-' + a).hidden = a !== nomeAba;
@@ -461,8 +497,10 @@ function iniciar() {
   // Voltou do cache de navegação (bfcache, comum no iOS): reconecta.
   window.addEventListener('pageshow', (e) => { if (e.persisted) reconectarManual(); });
 
+  ligarControle();
   mostrarNome(!nome);
   renderFila();
+  renderControle();
   renderResultados();
   renderStatus();
   conectar();

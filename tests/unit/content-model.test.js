@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
   panelModel, textoConns, videoIdFromHref, watchPath, novaSessao, avaliar, deveSilenciar,
-  TEXTOS, MAX_PROXIMOS, PLAY_TIMEOUT_MS,
+  TEXTOS, MAX_PROXIMOS, PLAY_TIMEOUT_MS, statusPlayer, aplicarControle,
 } from '../../extension/src/content/panel-model.js';
 import { CONFIG } from '../../extension/src/shared/protocol.js';
 
@@ -213,4 +213,38 @@ test('content.js tem sintaxe válida (node --check)', () => {
   const arq = fileURLToPath(new URL('../../extension/src/content/content.js', import.meta.url));
   const r = spawnSync(process.execPath, ['--check', arq], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
+});
+
+test('aplicarControle: pause, saltos limitados, mudo e volume', () => {
+  const v = { paused: false, muted: false, volume: 0.5, currentTime: 5, duration: 100, pause() { this.paused = true; } };
+  assert.equal(aplicarControle(v, 'pause'), null);
+  assert.equal(v.paused, true);
+  assert.equal(aplicarControle(v, 'play'), 'tocar');
+  aplicarControle(v, 'back');
+  assert.equal(v.currentTime, 0, 'não passa de 0');
+  v.currentTime = 95;
+  aplicarControle(v, 'forward');
+  assert.equal(v.currentTime, 100, 'não passa da duração');
+  aplicarControle(v, 'restart');
+  assert.equal(v.currentTime, 0);
+  aplicarControle(v, 'mute');
+  assert.equal(v.muted, true);
+  aplicarControle(v, 'volUp');
+  assert.equal(v.muted, false);
+  assert.equal(v.volume, 0.6);
+  aplicarControle(v, 'volDown');
+  aplicarControle(v, 'volDown');
+  assert.equal(v.volume, 0.4);
+  v.volume = 0.05;
+  aplicarControle(v, 'volDown');
+  assert.equal(v.volume, 0);
+  aplicarControle(v, 'unmute');
+  assert.equal(v.volume, 0.1, 'desmutar com volume 0 sobe um passo');
+  assert.equal(aplicarControle(v, 'lixo'), null);
+});
+
+test('statusPlayer: pausado, mudo (ou volume 0) e volume em %', () => {
+  assert.deepEqual(statusPlayer({ paused: true, muted: false, volume: 0.35 }), { pausado: true, mudo: false, volume: 35 });
+  assert.equal(statusPlayer({ paused: false, muted: false, volume: 0 }).mudo, true);
+  assert.equal(statusPlayer({ paused: false, muted: true, volume: 1 }).mudo, true);
 });

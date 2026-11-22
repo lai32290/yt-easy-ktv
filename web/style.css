@@ -134,6 +134,15 @@ input:focus-visible, .btn:focus-visible, .tab:focus-visible, .link-btn:focus-vis
 .tab-ico { font-size: 1.25rem; line-height: 1; }
 .tab[aria-selected="true"] { color: var(--accent); }
 
+/* ---- Controle do player ---- */
+.ctl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+.ctl-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 72px; }
+.ctl-btn:disabled { opacity: 0.5; }
+.ctl-ico { font-size: 1.5rem; line-height: 1; }
+.ctl-main { grid-column: span 3; min-height: 84px; }
+.ctl-wide { grid-column: span 3; }
+.ctl-volume { text-align: center; margin-top: 12px; }
+
 /* ---- Nome ---- */
 .name-overlay {
   position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, 0.7);

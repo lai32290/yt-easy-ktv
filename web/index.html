@@ -87,12 +87,29 @@
           <button type="submit" id="link-add" data-testid="link-add" class="btn btn-primary">Adicionar à fila</button>
         </form>
       </section>
+
+      <!-- Controle do player -->
+      <section id="panel-controle" class="panel" role="tabpanel" aria-labelledby="tab-controle" hidden>
+        <p id="ctl-titulo" class="muted" data-testid="ctl-titulo"></p>
+        <div id="ctl-grid" class="ctl-grid">
+          <button type="button" class="btn ctl-btn" id="ctl-restart" data-testid="ctl-restart"><span class="ctl-ico" aria-hidden="true">&#9198;</span><span>Do início</span></button>
+          <button type="button" class="btn ctl-btn" id="ctl-back" data-testid="ctl-back"><span class="ctl-ico" aria-hidden="true">&#9194;</span><span>-10s</span></button>
+          <button type="button" class="btn ctl-btn" id="ctl-forward" data-testid="ctl-forward"><span class="ctl-ico" aria-hidden="true">&#9193;</span><span>+10s</span></button>
+          <button type="button" class="btn btn-primary ctl-btn ctl-main" id="ctl-playpause" data-testid="ctl-playpause"><span class="ctl-ico" id="ctl-playpause-ico" aria-hidden="true">&#9208;</span><span id="ctl-playpause-txt">Pausar</span></button>
+          <button type="button" class="btn ctl-btn" id="ctl-voldown" data-testid="ctl-voldown"><span class="ctl-ico" aria-hidden="true">&#128265;</span><span>Volume -</span></button>
+          <button type="button" class="btn ctl-btn" id="ctl-mute" data-testid="ctl-mute"><span class="ctl-ico" id="ctl-mute-ico" aria-hidden="true">&#128263;</span><span id="ctl-mute-txt">Mudo</span></button>
+          <button type="button" class="btn ctl-btn" id="ctl-volup" data-testid="ctl-volup"><span class="ctl-ico" aria-hidden="true">&#128266;</span><span>Volume +</span></button>
+          <button type="button" class="btn ctl-btn ctl-wide" id="ctl-skip" data-testid="ctl-skip"><span class="ctl-ico" aria-hidden="true">&#9197;</span><span>Próxima</span></button>
+        </div>
+        <p id="ctl-volume" class="muted ctl-volume" data-testid="ctl-volume"></p>
+      </section>
     </main>
 
     <nav class="tabbar" role="tablist" aria-label="Seções">
       <button type="button" role="tab" id="tab-fila" data-testid="tab-fila" class="tab" aria-selected="true"><span class="tab-ico" aria-hidden="true">&#127908;</span><span>Fila</span></button>
       <button type="button" role="tab" id="tab-buscar" data-testid="tab-buscar" class="tab" aria-selected="false"><span class="tab-ico" aria-hidden="true">&#128269;</span><span>Buscar</span></button>
       <button type="button" role="tab" id="tab-link" data-testid="tab-link" class="tab" aria-selected="false"><span class="tab-ico" aria-hidden="true">&#128279;</span><span>Colar link</span></button>
+      <button type="button" role="tab" id="tab-controle" data-testid="tab-controle" class="tab" aria-selected="false"><span class="tab-ico" aria-hidden="true">&#127899;</span><span>Controle</span></button>
     </nav>
 
     <div id="toast-area" class="toast-area" aria-live="assertive">

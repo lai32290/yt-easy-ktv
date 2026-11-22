@@ -537,3 +537,42 @@ test('skip com itemId: dois pulos da mesma música (toque duplo / dois celulares
   await h.peer('c2', { t: 'skip', itemId: 123 });
   assert.equal(h.paraConn('c2').at(-1).codigo, 'msg_invalida');
 });
+
+test('control: só repassa ao content com música tocando e ação válida', async () => {
+  const h = montar();
+  await prepararKtv(h);
+  await h.peer('c1', { t: 'control', acao: 'pause' });
+  assert.equal(h.comandosTab('control').length, 0, 'sem started/atual: ignora');
+
+  await h.peer('c1', { t: 'add', videoId: V1 });
+  await h.int('started', {}, sender());
+  await h.peer('c1', { t: 'control', acao: 'pause' });
+  await h.peer('c2', { t: 'control', acao: 'volUp' });
+  assert.deepEqual(h.comandosTab('control').map((m) => m.acao), ['pause', 'volUp']);
+
+  await h.peer('c1', { t: 'control', acao: 'explodir' });
+  await h.peer('c1', { t: 'control' });
+  assert.equal(h.comandosTab('control').length, 2);
+  assert.deepEqual(h.paraConn('c1').filter((m) => m.t === 'error').map((m) => m.codigo), ['msg_invalida', 'msg_invalida']);
+});
+
+test('playerStatus: vira `player` no state; repetido não difunde; só vale da aba KTV; nova música volta a tocar', async () => {
+  const h = montar();
+  await prepararKtv(h);
+  await h.peer('c1', { t: 'add', videoId: V1 });
+  await h.peer('c1', { t: 'add', videoId: V2 });
+  await h.int('started', {}, sender());
+  assert.deepEqual(h.ultimoState().player, { pausado: false, mudo: false, volume: 100 });
+
+  await h.int('playerStatus', { pausado: true, mudo: true, volume: 40 }, sender(99));
+  assert.equal(h.ultimoState().player.pausado, false, 'aba que não é KTV é ignorada');
+
+  await h.int('playerStatus', { pausado: true, mudo: true, volume: 40 }, sender());
+  assert.deepEqual(h.ultimoState().player, { pausado: true, mudo: true, volume: 40 });
+  const n = h.broadcasts().length;
+  await h.int('playerStatus', { pausado: true, mudo: true, volume: 40 }, sender());
+  assert.equal(h.broadcasts().length, n, 'sem mudança: não difunde');
+
+  await h.int('ended', { videoId: V1 }, sender());
+  assert.deepEqual(h.ultimoState().player, { pausado: false, mudo: true, volume: 40 });
+});

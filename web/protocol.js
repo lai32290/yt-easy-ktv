@@ -23,11 +23,17 @@ export const C2E = {
   REMOVE: 'remove', // { itemId }
   SKIP: 'skip',     // { itemId? }  itemId = música que o celular quer pular (pulo repetido/atrasado é ignorado)
   MOVE: 'move',     // { itemId, toIndex }  (opcional)
+  CONTROL: 'control', // { acao }  acao ∈ ACOES_CONTROLE (controle do player da música atual)
 };
+
+// Ações da aba "Controle" do celular (C2E.CONTROL). "Próxima" usa C2E.SKIP.
+export const ACOES_CONTROLE = ['play', 'pause', 'restart', 'back', 'forward', 'mute', 'unmute', 'volDown', 'volUp'];
+export const CONTROLE_SALTO_S = 10;   // segundos de back/forward
+export const CONTROLE_VOLUME_PASSO = 10; // pontos percentuais de volDown/volUp
 
 // ---- Extensão -> celular ----
 export const E2C = {
-  STATE: 'state',     // { atual: Item|null, fila: Item[], tocando: boolean }
+  STATE: 'state',     // { atual: Item|null, fila: Item[], tocando: boolean, player: { pausado, mudo, volume 0-100 } }
   RESULTS: 'results', // { id, itens: [{videoId,titulo,canal,duracao}] }
   ERROR: 'error',     // { id?, codigo, msg }
 };
@@ -49,14 +55,17 @@ export const E2C = {
 //   started   {}                              usuário clicou "Iniciar" (autoplay liberado)
 //   ended     { videoId }                     vídeo terminou (o SW ignora se não for o `atual`)
 //   playerError { codigo, videoId }           vídeo indisponível/restrito/timeout
+//   playerStatus { pausado, mudo, volume }    estado do <video> (mudou); vira `player` no state
 // sw -> content     (target:'content', via chrome.tabs.sendMessage)
 //   play      { videoId }
+//   control   { acao }                        comando do player (ACOES_CONTROLE)
 //   idle      {}                              fila acabou; parar/mostrar QR grande
 //   panel     { state, roomId, siteUrl, conns, signaling }   dados do painel (QR/fila)
 export const INT = {
   ROOM: 'room', PEER_MSG: 'peerMsg', CONNS: 'conns', PEER_CLOSE: 'peerClose',
   INIT_PEER: 'initPeer', SEND: 'send', BROADCAST: 'broadcast',
   WHOAMI: 'whoami', STARTED: 'started', ENDED: 'ended', PLAYER_ERROR: 'playerError',
+  PLAYER_STATUS: 'playerStatus', CONTROL: 'control',
   PLAY: 'play', IDLE: 'idle', PANEL: 'panel',
 };
 export const TARGET = { SW: 'sw', OFFSCREEN: 'offscreen', CONTENT: 'content' };
