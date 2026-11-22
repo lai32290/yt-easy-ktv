@@ -27,7 +27,7 @@ export const C2E = {
 };
 
 // Ações da aba "Controle" do celular (C2E.CONTROL). "Próxima" usa C2E.SKIP.
-export const ACOES_CONTROLE = ['play', 'pause', 'restart', 'back', 'forward', 'mute', 'unmute', 'volDown', 'volUp'];
+export const ACOES_CONTROLE = ['play', 'pause', 'restart', 'back', 'forward', 'mute', 'unmute', 'volDown', 'volUp', 'fullscreen'];
 export const CONTROLE_SALTO_S = 10;   // segundos de back/forward
 export const CONTROLE_VOLUME_PASSO = 10; // pontos percentuais de volDown/volUp
 

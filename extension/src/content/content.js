@@ -453,6 +453,7 @@
       const v = achaVideo();
       if (!sessao || !v || !emWatch()) { log('controle ignorado (sem música na página):', acao); return; }
       if (!controlePermitido(acao, { anuncio: anuncioTocando() })) { log('controle ignorado durante anúncio:', acao); return; }
+      if (acao === 'fullscreen') { alternarFullscreen(); return; }
       // Som pela API do YouTube: mexer direto no <video> é desfeito pelo player no próximo vídeo/anúncio.
       const api = ACOES_VOLUME.includes(acao) ? somDaApi() : null;
       if (api) ponte('chamar', { chamadas: chamadasVolume(acao, api) });
@@ -486,6 +487,20 @@
       pedirFullscreen().then(() => {
         setTimeout(() => { if (querFullscreen && !document.fullscreenElement) esperarGestoFullscreen(); }, 1000);
       }, (e) => { log('fullscreen recusado', e && e.name); esperarGestoFullscreen(); });
+    }
+    // Botão "Tela cheia" do celular (toggle). Sair não exige gesto; entrar sem gesto do usuário o Chrome
+    // recusa, então cai no mesmo caminho da volta entre músicas: entra no próximo toque/tecla na TV.
+    function alternarFullscreen() {
+      if (document.fullscreenElement) {
+        querFullscreen = false;
+        gravarSessao('ktv.fullscreen', '0');
+        const b = document.querySelector('.ytp-fullscreen-button');
+        if (b) b.click(); else document.exitFullscreen().catch(() => {});
+        return;
+      }
+      querFullscreen = true;
+      gravarSessao('ktv.fullscreen', '1');
+      reentrarFullscreen();
     }
     // Etapas de um toque/clique/tecla. O Chrome nem sempre marca a ativação já no pointerdown
     // (visto no e2e): a cada etapa confere navigator.userActivation e só age quando ela vale.

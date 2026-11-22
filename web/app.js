@@ -356,6 +356,7 @@ function buscar() {
   if (!q) return;
   const id = `${meuPid.slice(0, 6)}-${Date.now().toString(36)}-${++buscaSeq}`;
   ultimaBuscaId = id;
+  $('ctl-fullscreen').addEventListener('click', () => controlar('fullscreen'));
   buscaEstado = 'carregando';
   resultados = [];
   renderResultados();
