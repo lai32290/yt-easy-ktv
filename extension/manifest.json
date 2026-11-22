@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "KTV YouTube",
+  "version": "0.1.0",
+  "description": "Karaokê no YouTube com fila pedida pelos celulares (P2P).",
+  "minimum_chrome_version": "116",
+  "permissions": ["offscreen", "storage", "tabs", "windows"],
+  "host_permissions": ["https://www.youtube.com/*"],
+  "background": {
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["src/content/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/shared/protocol.js", "src/content/overlay.css", "vendor/qrcode.js"],
+      "matches": ["https://www.youtube.com/*"]
+    }
+  ],
+  "action": { "default_title": "Abrir KTV" }
+}
