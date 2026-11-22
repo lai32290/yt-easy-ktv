@@ -19,11 +19,14 @@ Preparação: Chrome 116+ com a extensão carregada (modo desenvolvedor), um per
 - [ ] Clique em **Iniciar KTV**: o painel muda para o modo "fila vazia" (QR grande, instrução em pt-BR, "Nenhum celular conectado").
 - [ ] **[VALIDAR] Som sem novo clique:** depois de Iniciar, peça uma música pelo celular. Ela deve **tocar com som**, sem você clicar de novo no PC. Se aparecer o botão **▶ Tocar**, o Chrome barrou o autoplay: anote em que situação (primeira música? depois de recarregar?).
 - [ ] Escaneie o QR com a câmera do celular: o site abre **já conectado** (informe o nome na primeira vez).
+- [ ] Com o site já aberto no celular, escaneie um QR de **outra sala** (ex.: depois de a sala trocar de ID): o site deve recarregar e entrar na sala nova.
 
 ## 2. Navegação entre músicas
 
 - [ ] **[VALIDAR] SPA vs recarga completa:** com 3 músicas na fila, observe a troca: a página do YouTube deve trocar de vídeo **sem recarregar** (o painel não pisca). Se recarregar a página inteira, o som deve continuar a tocar sozinho (anote se pedir clique).
 - [ ] A música termina e a **próxima toca sozinha**, na ordem da fila. Nada de "recomendado" tocando.
+- [ ] **[VALIDAR] Player certo:** a janela KTV abre na home do YouTube, que tem prévias de vídeo ao passar o mouse nas miniaturas. Passe o mouse sobre miniaturas antes da primeira música: nada deve ser pausado/pulado por engano (o KTV procura o vídeo dentro de `#movie_player`).
+- [ ] **Pular com toque duplo / dois celulares ao mesmo tempo:** deve pular **uma** música só.
 - [ ] **[VALIDAR] Botão de autoplay do YouTube:** na barra do player, o botão "Reprodução automática" deve ser **desligado** pelo KTV (ícone cinza). Se o YouTube mudou o seletor, o log do console da aba mostra `[KTV] autoplay do YouTube desligado` (ou nada). Mesmo com ele ligado, o KTV deve conter o "próximo vídeo" (guarda anti-autoplay).
 - [ ] Ao terminar a **última** música: volta ao modo ocioso (QR grande). Um novo pedido toca sem clicar de novo.
 - [ ] **Pular** (de qualquer celular): troca de música imediatamente; pular a última deixa a sala ociosa.
@@ -32,7 +35,7 @@ Preparação: Chrome 116+ com a extensão carregada (modo desenvolvedor), um per
 
 - [ ] **[VALIDAR] Detecção de erro do player:** adicione um vídeo **privado/removido** (cole o link) e um vídeo com **restrição de idade/região**. O KTV deve pular em poucos segundos e todos os celulares recebem o aviso "<título> indisponível, pulada". Anote o texto que o YouTube mostrou no player e se o seletor (`.ytp-error` etc.) pegou.
 - [ ] Vídeo **sem incorporação** (oEmbed 401/403): deve entrar na fila com o título provisório "Vídeo <id>" e tocar normalmente no youtube.com.
-- [ ] **[VALIDAR] Anúncios:** com uma conta sem Premium, deixe tocar uma música que tenha anúncio antes. O fim do **anúncio** não pode ser tratado como fim da música (a música não pode ser pulada sozinha). Anote o que aconteceu.
+- [ ] **[VALIDAR] Anúncios:** com uma conta sem Premium, deixe tocar uma música que tenha anúncio antes. O fim do **anúncio** não pode ser tratado como fim da música (a música não pode ser pulada sozinha). Enquanto o player tem a classe `ad-showing`/`ad-interrupting` (no `#movie_player`), o KTV não conta "tocando" nem o timeout de 15 s. Teste também **2 anúncios seguidos** e um anúncio **no meio** da música. Anote o que aconteceu.
 - [ ] **[VALIDAR] "Continuar assistindo?":** deixe a fila rodar por 1 a 2 horas (ou mais) e veja se o YouTube pergunta "Continuar assistindo?". O KTV tenta confirmar sozinho (clica em `#confirm-button` do `yt-confirm-dialog-renderer`; o console da aba mostra `[KTV] "Continuar assistindo?" confirmado`). Se o diálogo aparecer e a música ficar parada, anote o HTML do diálogo: no meio de uma música (depois de começar a tocar) **não há timeout** que a pule.
 - [ ] **[VALIDAR] Tela cheia:** coloque o vídeo em tela cheia (F11 ou botão do player). O painel do KTV (QR/fila) **some** junto com a página; ao sair da tela cheia ele volta. Anote se isso atrapalha (talvez seja melhor usar a janela maximizada sem tela cheia).
 - [ ] Janela do player **minimizada** ou totalmente coberta: veja se a música continua a tocar e a trocar (o Chrome pode reduzir abas ocultas; o README manda manter a janela visível).
