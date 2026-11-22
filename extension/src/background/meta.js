@@ -9,7 +9,9 @@ export async function oembed(videoId, fetchImpl = fetch) {
   const url = `https://www.youtube.com/oembed?url=${encodeURIComponent(alvo)}&format=json`;
   let resp;
   try {
-    resp = await fetchImpl(url);
+    const opts = {};
+    if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) opts.signal = AbortSignal.timeout(10000);
+    resp = await fetchImpl(url, opts);
   } catch (e) {
     throw erro(`oEmbed falhou: ${e.message}`, 'video_indisponivel', { rede: true });
   }

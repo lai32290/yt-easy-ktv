@@ -39,6 +39,19 @@ export function extrairInitialData(html) {
       return JSON.parse(json);
     } catch { /* tenta a próxima ocorrência */ }
   }
+  // Variante vista em algumas respostas (ex.: m.youtube.com): o JSON vem como string JS
+  // com escapes `\xHH`: `var ytInitialData = '\x7b\x22...';`.
+  const reStr = /ytInitialData\s*=\s*'((?:[^'\\]|\\.)*)'/g;
+  while ((m = reStr.exec(html))) {
+    try {
+      const json = m[1].replace(/\\x([0-9a-fA-F]{2})|\\u([0-9a-fA-F]{4})|\\(.)/g,
+        (_, x, u, c) => (x ? String.fromCharCode(parseInt(x, 16))
+          : u ? String.fromCharCode(parseInt(u, 16))
+            : ({ n: '\n', r: '\r', t: '\t' }[c] ?? c)));
+      const dados = JSON.parse(json);
+      if (dados && typeof dados === 'object') return dados;
+    } catch { /* tenta a próxima ocorrência */ }
+  }
   return null;
 }
 

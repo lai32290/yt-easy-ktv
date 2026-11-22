@@ -88,3 +88,11 @@ test('parseResultsHtml: variante lockupViewModel (A/B do YouTube), ignora playli
   assert.ok(!ids.includes('LIVE_ID_002'), 'ao vivo');
   for (const i of itens) assert.match(i.duracao, /^\d+:\d{2}$/);
 });
+
+test('parseResultsHtml: aceita ytInitialData como string JS com escapes \\xHH (variante defensiva)', () => {
+  const ini = html.indexOf('{', html.indexOf('ytInitialData'));
+  const json = extrairJsonBalanceado(html, ini);
+  const esc = json.replace(/[{}"'\\]/g, (c) => `\\x${c.charCodeAt(0).toString(16).padStart(2, '0')}`);
+  const variante = `<html><script>var ytInitialData = '${esc}';</script></html>`;
+  assert.deepEqual(parseResultsHtml(variante), parseResultsHtml(html));
+});
