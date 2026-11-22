@@ -245,7 +245,13 @@ export async function criarAmbiente({ nomeTeste = 'e2e' } = {}) {
           url: location.href,
           videoId: new URL(location.href).searchParams.get('v'),
           pausado: v ? v.paused : null, terminou: v ? v.ended : null, tempo: v ? v.currentTime : null,
-          fake: f && { carregados: [...f.carregados], playing: [...f.playing], ended: [...f.ended], recTocou: f.recTocou, cliquesToggle: f.cliquesToggle },
+          volume: v ? v.volume : null, mudo: v ? v.muted : null,
+          telaCheia: !!document.fullscreenElement,
+          memoriaTelaCheia: sessionStorage.getItem('ktv.fullscreen'),
+          fake: f && {
+            carregados: [...f.carregados], playing: [...f.playing], ended: [...f.ended], recTocou: f.recTocou, cliquesToggle: f.cliquesToggle,
+            api: f.api && { ...f.api }, documento: f.documento,
+          },
         };
       }).catch(() => null);
     },

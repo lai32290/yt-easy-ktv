@@ -68,7 +68,7 @@
     const { INT, TARGET } = proto;
     const {
       panelModel, videoIdFromHref, watchPath, novaSessao, avaliar, deveSilenciar, deveReentrarFullscreen,
-      statusPlayer, aplicarControle,
+      saiuDoFullscreenPorEscolha, statusPlayer, aplicarControle, chamadasVolume, controlePermitido, ACOES_VOLUME,
     } = modelo;
     const qrcode = qrMod && qrMod.default;
 
@@ -86,6 +86,7 @@
     let autonavTentativas = 0;
     let ultimoQrUrl = null;
     let ultimoQrSvg = null;
+    let saindoDaPagina = false; // pagehide/beforeunload: a saída da tela cheia não é escolha do usuário
 
     // ================= Painel (shadow DOM) =================
     const raiz = document.createElement('div');
@@ -409,13 +410,39 @@
       }
     }
 
+    // ---- Ponte com o mundo principal da página (ponte-pagina.js) ----
+    // Pedido síncrono: a ponte responde no atributo antes de o dispatchEvent voltar.
+    // null = ponte ausente (ex.: script não injetado) ou resposta inválida.
+    const ATTR_RESPOSTA = 'data-ktv-resposta';
+    let seqPonte = 0;
+    function ponte(op, dados = {}) {
+      const id = ++seqPonte;
+      const html = document.documentElement;
+      try {
+        html.removeAttribute(ATTR_RESPOSTA);
+        document.dispatchEvent(new CustomEvent('ktv:pedido', { detail: JSON.stringify({ ...dados, op, id }) }));
+        const bruto = html.getAttribute(ATTR_RESPOSTA);
+        html.removeAttribute(ATTR_RESPOSTA);
+        const r = bruto ? JSON.parse(bruto) : null;
+        return r && r.id === id ? r : null;
+      } catch (e) {
+        log('ponte falhou:', op, e && e.message);
+        return null;
+      }
+    }
+    // Volume/mudo pela API do player do YouTube ({volume 0-100, mudo}) ou null se indisponível.
+    const somDaApi = () => {
+      const r = ponte('status');
+      return r && r.ok && Number.isFinite(r.volume) ? r : null;
+    };
+
     // Avisa o SW (e, por ele, os celulares) quando pausa/mudo/volume mudam.
-    // Só durante a reprodução da música: no fim/erro o <video> pausa e isso não é ação do usuário.
+    // Só durante a música da sessão (anúncio incluso): no fim/erro o <video> pausa e isso não é ação do usuário.
     function informarStatus() {
       const v = achaVideo();
       if (!v || !sessao || sessao.endedEnviado || sessao.erroEnviado) return;
-      if (urlVideoId() !== sessao.videoId || anuncioTocando()) return;
-      const st = statusPlayer(v);
+      if (urlVideoId() !== sessao.videoId) return;
+      const st = statusPlayer(v, somDaApi());
       const chave = JSON.stringify(st);
       if (chave === ultimoStatus) return;
       ultimoStatus = chave;
@@ -424,41 +451,75 @@
 
     async function controlar(acao) {
       const v = achaVideo();
-      if (!sessao || !v || !emWatch() || anuncioTocando()) return;
-      if (aplicarControle(v, acao) === 'tocar') await tentarTocar(v);
+      if (!sessao || !v || !emWatch()) { log('controle ignorado (sem música na página):', acao); return; }
+      if (!controlePermitido(acao, { anuncio: anuncioTocando() })) { log('controle ignorado durante anúncio:', acao); return; }
+      // Som pela API do YouTube: mexer direto no <video> é desfeito pelo player no próximo vídeo/anúncio.
+      const api = ACOES_VOLUME.includes(acao) ? somDaApi() : null;
+      if (api) ponte('chamar', { chamadas: chamadasVolume(acao, api) });
+      else if (aplicarControle(v, acao) === 'tocar') await tentarTocar(v);
       tick();
     }
 
-    // Fullscreen: lembra se o usuário estava em tela cheia; o YouTube sai dela ao trocar de vídeo.
-    // Sair no meio da música (sem fim/navegação) é escolha do usuário e desliga a lembrança.
+    // Fullscreen: lembra se o usuário estava em tela cheia (sessionStorage, sobrevive à recarga).
+    // O caminho principal é não sair dela: a troca de música é navegação interna do YouTube (ver
+    // navegar), que mantém a tela cheia. Se mesmo assim ela cair (ex.: recarga completa da página),
+    // o Chrome só deixa voltar com um gesto do usuário: tenta direto e, se recusar, no próximo toque/tecla.
     function aoMudarFullscreen() {
       if (document.fullscreenElement) querFullscreen = true;
-      else if (sessao && !sessao.endedEnviado && !sessao.navIniciada) querFullscreen = false;
+      else if (saiuDoFullscreenPorEscolha(sessao, { urlVideoId: urlVideoId(), saindoDaPagina })) querFullscreen = false;
       else return;
       gravarSessao('ktv.fullscreen', querFullscreen ? '1' : '0');
     }
-    // requestFullscreen exige gesto do usuário: tenta direto e, se recusar, no próximo clique/tecla.
-    function reentrarFullscreen() {
-      const p = achaPlayer();
-      if (!p || !p.requestFullscreen) return;
-      const falhou = (e) => { log('fullscreen recusado', e && e.name); esperarGestoFullscreen(); };
-      try { Promise.resolve(p.requestFullscreen()).catch(falhou); } catch (e) { falhou(e); }
+    // Entra em tela cheia como o YouTube faz (botão do player: a interface dele fica coerente);
+    // sem o botão, pede para o documento todo. Precisa de ativação do usuário.
+    function pedirFullscreen() {
+      const b = document.querySelector('.ytp-fullscreen-button');
+      if (b) { b.click(); return Promise.resolve(); }
+      const alvo = document.documentElement;
+      try { return Promise.resolve(alvo.requestFullscreen()); } catch (e) { return Promise.reject(e); }
     }
+    function reentrarFullscreen() {
+      // Sem ativação do usuário o Chrome recusa (o botão do YouTube falharia em silêncio): só tenta
+      // direto se houver ativação; senão espera o próximo gesto.
+      const ativo = !!(navigator.userActivation && navigator.userActivation.isActive);
+      if (!ativo) { esperarGestoFullscreen(); return; }
+      pedirFullscreen().then(() => {
+        setTimeout(() => { if (querFullscreen && !document.fullscreenElement) esperarGestoFullscreen(); }, 1000);
+      }, (e) => { log('fullscreen recusado', e && e.name); esperarGestoFullscreen(); });
+    }
+    // Etapas de um toque/clique/tecla. O Chrome nem sempre marca a ativação já no pointerdown
+    // (visto no e2e): a cada etapa confere navigator.userActivation e só age quando ela vale.
+    const EVENTOS_GESTO = ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'touchend', 'click', 'keydown'];
     let esperandoGesto = false;
     function esperarGestoFullscreen() {
       if (esperandoGesto) return;
       esperandoGesto = true;
-      const h = () => {
-        document.removeEventListener('pointerdown', h, true);
-        document.removeEventListener('keydown', h, true);
+      log('tela cheia: volta no próximo toque ou tecla');
+      // O toque que devolve a tela cheia não deve também pausar o vídeo (clique no player do YouTube).
+      // Só o clique real: o .click() sintético no botão de tela cheia do YouTube tem de passar.
+      const engolirClique = (e) => {
+        if (!e.isTrusted) return;
+        document.removeEventListener('click', engolirClique, true);
+        e.stopPropagation();
+        e.preventDefault();
+      };
+      const desligar = () => {
+        for (const ev of EVENTOS_GESTO) document.removeEventListener(ev, h, true);
         esperandoGesto = false;
-        if (querFullscreen && !document.fullscreenElement) {
-          const p = achaPlayer();
-          if (p && p.requestFullscreen) p.requestFullscreen().catch(() => {});
+      };
+      const h = (e) => {
+        if (morto || !querFullscreen || document.fullscreenElement) { desligar(); return; }
+        const ua = navigator.userActivation;
+        if (ua && !ua.isActive) return; // esta etapa ainda não deu ativação (ou foi Esc): espera a próxima
+        desligar();
+        pedirFullscreen().catch((err) => log('fullscreen recusado mesmo com gesto', err && err.name));
+        if (e.type === 'click') engolirClique(e);
+        else if (e.type !== 'keydown') {
+          document.addEventListener('click', engolirClique, true);
+          setTimeout(() => document.removeEventListener('click', engolirClique, true), 1000);
         }
       };
-      document.addEventListener('pointerdown', h, true);
-      document.addEventListener('keydown', h, true);
+      for (const ev of EVENTOS_GESTO) document.addEventListener(ev, h, true);
     }
 
     function tick() {
@@ -510,12 +571,11 @@
       }
     }
 
-    // Navega para o vídeo. [VALIDAR] se o YouTube trata o clique em <a> como navegação
-    // SPA; senão o navegador faz carga completa (o script reinicia e retoma pelo whoami).
-    function navegar(videoId) {
-      const caminho = watchPath(videoId);
-      if (!caminho) return;
-      const t0 = Date.now();
+    // Navega para o vídeo. 1º: navegação interna do YouTube (`yt-navigate` pela ponte, SPA): não
+    // recarrega a página e mantém a tela cheia. Conferido no youtube.com real: um <a> criado por script
+    // e clicado faz carga completa (sai da tela cheia), então ele é só a 2ª opção; a 3ª é location.href.
+    // Em carga completa o script reinicia e retoma pelo whoami.
+    function clicarLink(caminho) {
       try {
         const host = document.querySelector('ytd-app') || document.body;
         const a = document.createElement('a');
@@ -524,19 +584,32 @@
         host.appendChild(a);
         a.click();
         a.remove();
+        return true;
       } catch (e) {
-        log('navegação por <a> falhou, usando location.href', e && e.message);
-        location.href = caminho;
-        return;
+        log('navegação por <a> falhou', e && e.message);
+        return false;
       }
+    }
+    function navegar(videoId) {
+      const caminho = watchPath(videoId);
+      if (!caminho) return;
+      const t0 = Date.now();
+      const spa = ponte('navegar', { videoId });
+      let fase = spa && spa.ok ? 'spa' : 'link';
+      if (fase === 'link' && !clicarLink(caminho)) { location.href = caminho; return; }
       const conferir = () => {
-        if (morto || !sessao || sessao.videoId !== videoId) return;
+        if (morto || saindoDaPagina || !sessao || sessao.videoId !== videoId) return;
         if (urlVideoId() === videoId) return;
         if (sessao.navIniciada && Date.now() - t0 < 8000) { setTimeout(conferir, 4000); return; }
+        if (fase === 'spa') {
+          log('navegação interna do YouTube não ocorreu, tentando <a>');
+          fase = 'link';
+          if (clicarLink(caminho)) { setTimeout(conferir, 3000); return; }
+        }
         log('navegação não ocorreu, fallback location.href');
         location.href = caminho;
       };
-      setTimeout(conferir, 3000);
+      setTimeout(conferir, fase === 'spa' ? 2000 : 3000);
     }
 
     function iniciarSessao(videoId) {
@@ -621,12 +694,20 @@
     document.addEventListener('yt-navigate-finish', aoNavegarFim);
     document.addEventListener('play', aoPlayCapturado, true);
     document.addEventListener('fullscreenchange', aoMudarFullscreen);
+    const aoSairDaPagina = () => { saindoDaPagina = true; };
+    const aoVoltarDaPagina = () => { saindoDaPagina = false; }; // cache de voltar/avançar
+    window.addEventListener('pagehide', aoSairDaPagina);
+    window.addEventListener('beforeunload', aoSairDaPagina);
+    window.addEventListener('pageshow', aoVoltarDaPagina);
     const intervalo = setInterval(tick, 1000);
     limpezas.push(() => {
       document.removeEventListener('yt-navigate-start', aoNavegarInicio);
       document.removeEventListener('yt-navigate-finish', aoNavegarFim);
       document.removeEventListener('play', aoPlayCapturado, true);
       document.removeEventListener('fullscreenchange', aoMudarFullscreen);
+      window.removeEventListener('pagehide', aoSairDaPagina);
+      window.removeEventListener('beforeunload', aoSairDaPagina);
+      window.removeEventListener('pageshow', aoVoltarDaPagina);
       clearInterval(intervalo);
       anexarVideo(null);
       raiz.remove();
@@ -646,6 +727,9 @@
     } else {
       mostrarIniciar(true);
     }
+    // Página (re)carregada e a tela cheia ficou para trás (ex.: recarga completa na troca de música):
+    // já deixa o próximo toque/tecla devolvê-la, sem esperar a música começar.
+    if (iniciou && querFullscreen && !document.fullscreenElement) esperarGestoFullscreen();
     pronto = true;
     for (const m of bufferMsgs.splice(0)) tratar(m);
     tick();

@@ -178,21 +178,58 @@ export function deveSilenciar(s, obs) {
 
 // ---- Controle do player (aba "Controle" do celular) ----
 
-/** Estado do <video> que vai para os celulares: { pausado, mudo, volume 0-100 }. */
-export function statusPlayer(v) {
+const limitar = (x, min, max) => Math.max(min, Math.min(max, x));
+
+/**
+ * Estado do player que vai para os celulares: { pausado, mudo, volume 0-100 }.
+ * `api` (opcional) = { volume 0-100, mudo } lido da API do player do YouTube (ponte-pagina.js).
+ * Com ela, o volume é o que o usuário escolheu: o <video>.volume do YouTube vem "normalizado"
+ * (volume estável) e daria outro número.
+ */
+export function statusPlayer(v, api = null) {
+  const pausado = Boolean(v.paused);
+  if (api && Number.isFinite(api.volume)) {
+    const volume = limitar(Math.round(api.volume), 0, 100);
+    return { pausado, mudo: Boolean(api.mudo) || volume === 0, volume };
+  }
   return {
-    pausado: Boolean(v.paused),
+    pausado,
     mudo: Boolean(v.muted) || v.volume === 0,
     volume: Math.round((Number.isFinite(v.volume) ? v.volume : 1) * 100),
   };
 }
 
+/** Ações de som: com a API do YouTube vão por ela (ver chamadasVolume). */
+export const ACOES_VOLUME = ['mute', 'unmute', 'volDown', 'volUp'];
+/** Ações que mexem na posição do vídeo: durante um anúncio não valem (o <video> é o do anúncio). */
+export const ACOES_SALTO = ['restart', 'back', 'forward'];
+
+/** A ação pode ser aplicada agora? obs: { anuncio } */
+export function controlePermitido(acao, obs) {
+  return !(obs && obs.anuncio && ACOES_SALTO.includes(acao));
+}
+
 /**
- * Aplica uma ação de ACOES_CONTROLE ao <video>. Devolve 'tocar' quando é preciso chamar play()
+ * Chamadas à API do player do YouTube para uma ação de som, a partir do estado atual
+ * { volume 0-100, mudo }. Devolve [[metodo, ...args]] (métodos: setVolume, mute, unMute) ou null.
+ */
+export function chamadasVolume(acao, { volume } = {}) {
+  const vol = Number.isFinite(volume) ? limitar(Math.round(volume), 0, 100) : 100;
+  switch (acao) {
+    case 'mute': return [['mute']];
+    case 'unmute': return vol === 0 ? [['setVolume', CONTROLE_VOLUME_PASSO], ['unMute']] : [['unMute']];
+    case 'volDown': return [['setVolume', limitar(vol - CONTROLE_VOLUME_PASSO, 0, 100)]];
+    case 'volUp': return [['setVolume', limitar(vol + CONTROLE_VOLUME_PASSO, 0, 100)], ['unMute']];
+    default: return null;
+  }
+}
+
+/**
+ * Aplica uma ação de ACOES_CONTROLE direto no <video> (play/pausa/saltos; e som quando não há a
+ * API do YouTube, caso em que o YouTube pode reaplicar o volume dele no próximo vídeo). Devolve 'tocar' quando é preciso chamar play()
  * (que é assíncrono e pode ser recusado), senão null. Ação desconhecida não faz nada.
  */
 export function aplicarControle(v, acao) {
-  const limitar = (x, min, max) => Math.max(min, Math.min(max, x));
   const dur = Number.isFinite(v.duration) ? v.duration : Infinity;
   switch (acao) {
     case 'play': return 'tocar';
@@ -224,4 +261,18 @@ export function aplicarControle(v, acao) {
 export function deveReentrarFullscreen(s, querFullscreen, obs) {
   if (!s || !querFullscreen || s.fsTentado) return false;
   return Boolean(obs.emWatch && obs.tocando && !obs.emFullscreen);
+}
+
+/**
+ * Saiu da tela cheia: foi escolha do usuário (desliga a lembrança) ou efeito da troca de música?
+ * Só conta como escolha no meio de uma música que já estava tocando, na página dela e sem a página
+ * estar sendo descarregada. Durante a troca (sessão nova, ainda sem `playing`), no fim/erro e na
+ * recarga da página, a saída não apaga a lembrança.
+ * obs: { urlVideoId, saindoDaPagina }
+ */
+export function saiuDoFullscreenPorEscolha(s, obs) {
+  if (obs && obs.saindoDaPagina) return false;
+  if (!s) return true; // nada tocando (fila vazia): o usuário saiu porque quis
+  if (s.endedEnviado || s.erroEnviado || !s.viuPlaying) return false;
+  return Boolean(obs && obs.urlVideoId === s.videoId);
 }

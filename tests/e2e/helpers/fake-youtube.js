@@ -1,6 +1,12 @@
 // YouTube falso: serve, via context.route, as páginas /?ktv=1 e /watch?v=ID (com <ytd-app>,
 // <video class="html5-main-video"> e um WAV curto), além de /oembed e /results (fixtures).
 // Também simula o autoplay do YouTube ("recomendado" ao terminar) para provar que o KTV o contém.
+// Fiel ao youtube.com real (conferido com o Chromium contra o site):
+//  - a navegação interna (SPA) é o evento `yt-navigate` no <ytd-app>; um <a> comum faz carga completa;
+//  - o #movie_player tem a API de som (getVolume/setVolume/isMuted/mute/unMute, volume 0-100) e o
+//    <video>.volume é "normalizado" (volume estável); a cada vídeo novo o player reaplica o volume DELE,
+//    desfazendo o que foi mexido direto no <video>;
+//  - o botão .ytp-fullscreen-button põe o documento todo em tela cheia, que sobrevive à navegação SPA.
 import fs from 'node:fs';
 import path from 'node:path';
 import { FIXTURES_DIR } from './servers.js';
@@ -30,7 +36,24 @@ function scriptPagina(cfg) {
   const video = document.querySelector('video.html5-main-video');
   const erro = document.querySelector('.ytp-error');
   const toggle = document.querySelector('.ytp-autonav-toggle-button');
-  const log = (window.__fake = { carregados: [], playing: [], ended: [], recTocou: 0, cliquesToggle: 0 });
+  const log = (window.__fake = { carregados: [], playing: [], ended: [], recTocou: 0, cliquesToggle: 0, api: null });
+  const player = document.getElementById('movie_player');
+  // API de som do player (como o YouTube): estado próprio, aplicado ao <video> com normalização.
+  const som = { volume: 100, mudo: false };
+  log.api = som;
+  const NORMALIZACAO = 0.8;
+  const aplicarSom = () => { video.volume = (som.volume / 100) * NORMALIZACAO; video.muted = som.mudo; };
+  if (CFG.api !== false) {
+    player.getVolume = () => som.volume;
+    player.setVolume = (n) => { som.volume = Math.max(0, Math.min(100, Math.round(Number(n)))); aplicarSom(); };
+    player.isMuted = () => som.mudo;
+    player.mute = () => { som.mudo = true; aplicarSom(); };
+    player.unMute = () => { som.mudo = false; aplicarSom(); };
+  }
+  document.querySelector('.ytp-fullscreen-button').addEventListener('click', () => {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else document.documentElement.requestFullscreen().catch(() => { log.fsRecusado = (log.fsRecusado || 0) + 1; });
+  });
   toggle.addEventListener('click', () => {
     log.cliquesToggle++;
     toggle.setAttribute('aria-checked', toggle.getAttribute('aria-checked') === 'true' ? 'false' : 'true');
@@ -47,9 +70,11 @@ function scriptPagina(cfg) {
     }
     const d = (CFG.duracoes && CFG.duracoes[id]) || CFG.duracao;
     video.src = '/fake.wav?d=' + d + '&v=' + id;
+    aplicarSom(); // o player reaplica o volume dele a cada vídeo
     // O YouTube real tenta tocar sozinho ao abrir um vídeo (pode ser barrado pela política de autoplay).
     video.play().catch(() => {});
   }
+  log.documento = Math.random(); // muda a cada carga completa da página (SPA mantém)
   function irPara(id, spa) {
     if (!spa || CFG.modo === 'full') { location.href = '/watch?v=' + id; return; }
     document.dispatchEvent(new CustomEvent('yt-navigate-start'));
@@ -72,17 +97,23 @@ function scriptPagina(cfg) {
       setTimeout(() => { if (idAtual() === id) irPara(REC, true); }, CFG.atrasoAutoplay);
     }
   });
-  // Navegação SPA: o clique em <a href="/watch?v=…"> não recarrega a página (como no YouTube).
-  document.addEventListener('click', (e) => {
-    const a = e.target.closest && e.target.closest('a[href]');
-    if (!a) return;
-    const u = new URL(a.href, location.href);
-    if (u.pathname !== '/watch' || CFG.modo === 'full') return;
-    e.preventDefault();
-    irPara(u.searchParams.get('v'), true);
-  }, true);
+  // Navegação SPA: o evento yt-navigate no <ytd-app> (como o YouTube; um <a> comum recarrega a página).
+  document.querySelector('ytd-app').addEventListener('yt-navigate', (e) => {
+    const ep = e.detail && e.detail.endpoint;
+    const id = ep && ep.watchEndpoint && ep.watchEndpoint.videoId;
+    if (id) irPara(id, true);
+  });
   if (idAtual()) carregar(idAtual());
 })();`;
+}
+
+// Página inicial: sem player; o yt-navigate para um vídeo vira carga da /watch.
+function scriptInicio() {
+  return `document.querySelector('ytd-app').addEventListener('yt-navigate', (e) => {
+  const ep = e.detail && e.detail.endpoint;
+  const id = ep && ep.watchEndpoint && ep.watchEndpoint.videoId;
+  if (id) location.href = '/watch?v=' + id;
+});`;
 }
 
 function paginaHtml(cfg, videoId) {
@@ -96,10 +127,11 @@ video{width:640px;height:360px}.ytp-error{position:absolute;inset:0;background:#
 ${watch ? `<div id="movie_player" class="html5-video-player">
   <video class="html5-main-video" playsinline></video>
   <button class="ytp-autonav-toggle-button" aria-checked="true" aria-label="Reprodução automática">Autoplay</button>
+  <button class="ytp-fullscreen-button" aria-label="Tela cheia">Tela cheia</button>
   <div class="ytp-error" style="display:none"><div class="ytp-error-content">Este vídeo não está disponível</div></div>
 </div>` : ''}
 </ytd-app>
-${watch ? `<script>${scriptPagina(cfg)}</script>` : ''}
+<script>${watch ? scriptPagina(cfg) : scriptInicio()}</script>
 </body></html>`;
 }
 
@@ -107,19 +139,20 @@ ${watch ? `<script>${scriptPagina(cfg)}</script>` : ''}
  * Instala as rotas do YouTube falso no contexto. Devolve o controle (campos mutáveis):
  *  indisponiveis: Set de videoIds com erro no player; oembedFalha: Map id -> status HTTP;
  *  titulos: Map id -> título do oEmbed; busca: 'normal'|'lockup'|'falha'|'vazia';
- *  modo: 'spa'|'full'; autoplay: 'botao'|'sempre'|'nunca'; duracao (s); duracoes: Map id -> s.
+ *  modo: 'spa'|'full'; autoplay: 'botao'|'sempre'|'nunca'; duracao (s); duracoes: Map id -> s;
+ *  api: false tira a API de som do #movie_player (o KTV cai no <video> direto).
  */
 export async function instalarYoutubeFalso(context) {
   const ctl = {
     indisponiveis: new Set(), oembedFalha: new Map(), titulos: new Map(),
-    busca: 'normal', modo: 'spa', autoplay: 'botao', duracao: 1.5, duracoes: new Map(), atrasoAutoplay: 300,
+    busca: 'normal', modo: 'spa', autoplay: 'botao', duracao: 1.5, duracoes: new Map(), atrasoAutoplay: 300, api: true,
     pedidos: [], // { tipo, url, doSw }
     consultas: [], // termos de busca recebidos
   };
   const wavs = new Map();
   const cfg = () => ({
     indisponiveis: [...ctl.indisponiveis], modo: ctl.modo, autoplay: ctl.autoplay, duracao: ctl.duracao,
-    duracoes: Object.fromEntries(ctl.duracoes), atrasoAutoplay: ctl.atrasoAutoplay,
+    duracoes: Object.fromEntries(ctl.duracoes), atrasoAutoplay: ctl.atrasoAutoplay, api: ctl.api,
   });
 
   await context.route('https://www.youtube.com/**', async (route) => {

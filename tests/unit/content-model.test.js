@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import {
   panelModel, textoConns, videoIdFromHref, watchPath, novaSessao, avaliar, deveSilenciar,
   deveReentrarFullscreen, TEXTOS, MAX_PROXIMOS, PLAY_TIMEOUT_MS, statusPlayer, aplicarControle,
+  chamadasVolume, controlePermitido, saiuDoFullscreenPorEscolha, ACOES_VOLUME, ACOES_SALTO,
 } from '../../extension/src/content/panel-model.js';
 import { CONFIG } from '../../extension/src/shared/protocol.js';
 
@@ -209,10 +210,12 @@ test('guarda anti-autoplay: silencia vídeo que toca sem sessão ativa', () => {
   assert.equal(deveSilenciar(null, { ...tocando, emWatch: false }), false);
 });
 
-test('content.js tem sintaxe válida (node --check)', () => {
-  const arq = fileURLToPath(new URL('../../extension/src/content/content.js', import.meta.url));
-  const r = spawnSync(process.execPath, ['--check', arq], { encoding: 'utf8' });
-  assert.equal(r.status, 0, r.stderr);
+test('content.js e ponte-pagina.js têm sintaxe válida (node --check)', () => {
+  for (const nome of ['content.js', 'ponte-pagina.js']) {
+    const arq = fileURLToPath(new URL(`../../extension/src/content/${nome}`, import.meta.url));
+    const r = spawnSync(process.execPath, ['--check', arq], { encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+  }
 });
 
 test('aplicarControle: pause, saltos limitados, mudo e volume', () => {
@@ -247,6 +250,56 @@ test('statusPlayer: pausado, mudo (ou volume 0) e volume em %', () => {
   assert.deepEqual(statusPlayer({ paused: true, muted: false, volume: 0.35 }), { pausado: true, mudo: false, volume: 35 });
   assert.equal(statusPlayer({ paused: false, muted: false, volume: 0 }).mudo, true);
   assert.equal(statusPlayer({ paused: false, muted: true, volume: 1 }).mudo, true);
+});
+
+test('statusPlayer com a API do YouTube: volume do usuário, não o do <video> normalizado', () => {
+  // YouTube real: volume 100 no player e <video>.volume 0.89 (volume estável)
+  const v = { paused: false, muted: false, volume: 0.89 };
+  assert.deepEqual(statusPlayer(v, { volume: 100, mudo: false }), { pausado: false, mudo: false, volume: 100 });
+  assert.deepEqual(statusPlayer(v, { volume: 40, mudo: true }), { pausado: false, mudo: true, volume: 40 });
+  assert.equal(statusPlayer(v, { volume: 0, mudo: false }).mudo, true);
+  assert.equal(statusPlayer(v, { volume: 250, mudo: false }).volume, 100);
+  assert.equal(statusPlayer(v, { volume: null }).volume, 89, 'sem volume na API: usa o <video>');
+  assert.equal(statusPlayer({ ...v, paused: true }, { volume: 50, mudo: false }).pausado, true, 'pausado vem do <video>');
+});
+
+test('chamadasVolume: mudo, ativar som e passos de volume pela API do player', () => {
+  assert.deepEqual(ACOES_VOLUME, ['mute', 'unmute', 'volDown', 'volUp']);
+  assert.deepEqual(chamadasVolume('mute', { volume: 50 }), [['mute']]);
+  assert.deepEqual(chamadasVolume('unmute', { volume: 50 }), [['unMute']]);
+  assert.deepEqual(chamadasVolume('unmute', { volume: 0 }), [['setVolume', 10], ['unMute']], 'desmutar com volume 0 sobe um passo');
+  assert.deepEqual(chamadasVolume('volDown', { volume: 50 }), [['setVolume', 40]]);
+  assert.deepEqual(chamadasVolume('volDown', { volume: 5 }), [['setVolume', 0]]);
+  assert.deepEqual(chamadasVolume('volUp', { volume: 95 }), [['setVolume', 100], ['unMute']]);
+  assert.deepEqual(chamadasVolume('volUp', { volume: 37.4 }), [['setVolume', 47], ['unMute']]);
+  assert.deepEqual(chamadasVolume('volUp', {}), [['setVolume', 100], ['unMute']]);
+  assert.equal(chamadasVolume('play', { volume: 50 }), null);
+});
+
+test('controlePermitido: durante anúncio, saltos não valem; tocar/pausar e som sim', () => {
+  for (const a of ACOES_SALTO) {
+    assert.equal(controlePermitido(a, { anuncio: true }), false, a);
+    assert.equal(controlePermitido(a, { anuncio: false }), true, a);
+  }
+  for (const a of ['play', 'pause', ...ACOES_VOLUME]) assert.equal(controlePermitido(a, { anuncio: true }), true, a);
+});
+
+test('saiuDoFullscreenPorEscolha: só no meio de uma música que já tocava', () => {
+  const s = novaSessao('v1', 0);
+  const obs = { urlVideoId: 'v1', saindoDaPagina: false };
+  assert.equal(saiuDoFullscreenPorEscolha(s, obs), false, 'sessão nova (troca de música): não apaga a lembrança');
+  s.viuPlaying = true;
+  assert.equal(saiuDoFullscreenPorEscolha(s, obs), true, 'no meio da música: escolha do usuário');
+  assert.equal(saiuDoFullscreenPorEscolha(s, { ...obs, saindoDaPagina: true }), false, 'página sendo descarregada');
+  assert.equal(saiuDoFullscreenPorEscolha(s, { ...obs, urlVideoId: 'v2' }), false, 'já em outro vídeo (navegação)');
+  s.endedEnviado = true;
+  assert.equal(saiuDoFullscreenPorEscolha(s, obs), false, 'música terminou');
+  const e = novaSessao('v1', 0);
+  e.viuPlaying = true;
+  e.erroEnviado = true;
+  assert.equal(saiuDoFullscreenPorEscolha(e, obs), false, 'erro no player');
+  assert.equal(saiuDoFullscreenPorEscolha(null, obs), true, 'nada tocando: escolha do usuário');
+  assert.equal(saiuDoFullscreenPorEscolha(null, { ...obs, saindoDaPagina: true }), false);
 });
 
 test('deveReentrarFullscreen: volta à tela cheia na próxima música, uma vez', () => {
