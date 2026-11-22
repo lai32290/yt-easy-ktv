@@ -21,8 +21,8 @@ Legenda: `[ ]` pendente · **[VALIDAR]** = ponto incerto que exige teste real no
 **Extensão**
 - [ ] **T1.1 `manifest.json` MV3.** Permissões `offscreen`, `storage`, `tabs`, `windows`; `host_permissions` `https://www.youtube.com/*`; `background.service_worker`; `content_scripts` (matches youtube, `document_idle`). Entrega: extensão carrega em `chrome://extensions` (modo desenvolvedor) sem erros. Dep: T0.1.
 - [ ] **T1.2 Service worker mínimo.** Ao iniciar, garantir o offscreen document (`chrome.offscreen.hasDocument`/`createDocument`, reason `WEB_RTC`). Entrega: log mostrando o offscreen criado, sem duplicar. Dep: T1.1.
-- [ ] **T1.3 Offscreen: criar o Peer.** `offscreen.html` + `offscreen.js` instanciam `new Peer()`; ao `open`, enviam `roomId` ao service worker via `chrome.runtime.sendMessage`. Entrega: ID da sala visível no log do SW. Dep: T1.2, T0.3.
-- [ ] **T1.4 Offscreen: aceitar conexões.** `peer.on('connection')`, manter lista de conexões abertas, remover ao fechar. Repassar mensagens recebidas ao SW. Dep: T1.3, T0.4.
+- [x] **T1.3 Offscreen: criar o Peer.** `offscreen.html` + `offscreen.js` instanciam `new Peer()`; ao `open`, enviam `roomId` ao service worker via `chrome.runtime.sendMessage`. Entrega: ID da sala visível no log do SW. Dep: T1.2, T0.3.
+- [x] **T1.4 Offscreen: aceitar conexões.** `peer.on('connection')`, manter lista de conexões abertas, remover ao fechar. Repassar mensagens recebidas ao SW. Dep: T1.3, T0.4.
 - [ ] **T1.5 Fila em memória + `state`.** Módulo puro `queue.js` (adicionar, remover, avançar) sem dependência do Chrome; SW usa e devolve `state` ao offscreen para broadcast. Dep: T1.4.
 - [ ] **T1.6 Testes unitários de `queue.js`.** Casos: adicionar, duplicata, remover, avançar, fila vazia. Rodar com `node --test` (só dev; usuário final não precisa de Node). Dep: T1.5.
 
@@ -83,7 +83,7 @@ Legenda: `[ ]` pendente · **[VALIDAR]** = ponto incerto que exige teste real no
 
 ## M5 — Robustez
 
-- [ ] **T5.1 Reconexão do PeerJS.** `peer.on('disconnected')` → `peer.reconnect()`; se `peer.destroyed`, recriar com o **mesmo ID**. Persistir o ID da sala em `chrome.storage` (via SW) e passá-lo ao offscreen. Dep: T1.3, T2.9.
+- [~] **T5.1 Reconexão do PeerJS.** _(lado offscreen feito e testado com Peer falso; falta persistência do roomId no SW e teste real)_ `peer.on('disconnected')` → `peer.reconnect()`; se `peer.destroyed`, recriar com o **mesmo ID**. Persistir o ID da sala em `chrome.storage` (via SW) e passá-lo ao offscreen. Dep: T1.3, T2.9.
 - [ ] **T5.2 Reconexão no celular.** Botão "reconectar" + tentativa automática com backoff, reaproveitando o mesmo `#sala`. Dep: T1.8.
 - [ ] **T5.3 Regras de permissão.** `remove` só do próprio item (comparar participante); `skip` liberado a todos (configurável por constante). Dep: T3.3.
 - [ ] **T5.4 Identidade do participante.** ID estável por celular (guardado em `localStorage`) enviado no `hello`, para que "remover o próprio item" sobreviva a reconexões. Dep: T1.9.
