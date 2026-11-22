@@ -9,7 +9,7 @@ const sender = (tabId = KTV_TAB) => ({ tab: { id: tabId } });
 const V1 = 'aaaaaaaaaa1'; const V2 = 'aaaaaaaaaa2'; const V3 = 'aaaaaaaaaa3';
 
 // Monta um núcleo com dependências falsas; `storageMap` pode ser reaproveitado para simular "SW acordando".
-function montar({ storageMap = new Map(), oembed, buscar, offscreenExiste = false } = {}) {
+function montar({ storageMap = new Map(), oembed, buscar, offscreenExiste = false, offscreenNovo = false, respostasOff } = {}) {
   let n = 0;
   const log = { off: [], tab: [], criadas: 0, focos: 0, abas: new Set([KTV_TAB]) };
   const storage = {
@@ -18,15 +18,20 @@ function montar({ storageMap = new Map(), oembed, buscar, offscreenExiste = fals
   };
   const nucleo = criarNucleo({
     storage,
-    send: async (m) => { log.off.push(m); return { ok: true }; },
+    send: async (m) => {
+      log.off.push(m);
+      if (respostasOff && respostasOff.length) { const r = respostasOff.shift(); if (r instanceof Error) throw r; return r; }
+      return { ok: true };
+    },
     sendToTab: async (tabId, m) => {
       if (!log.abas.has(tabId)) throw new Error('sem aba');
       log.tab.push({ tabId, ...m });
     },
-    ensureOffscreen: async () => offscreenExiste,
+    ensureOffscreen: async () => offscreenExiste || offscreenNovo,
     janelas: {
       criar: async () => { log.criadas++; log.abas.add(KTV_TAB); return { tabId: KTV_TAB, windowId: 70 }; },
       focar: async (tabId) => { log.focos++; return log.abas.has(tabId); },
+      recarregar: async (tabId) => { (log.recargas ||= []).push(tabId); return log.abas.has(tabId); },
     },
     buscar: buscar || (async () => [{ videoId: V1, titulo: 'Achado', canal: 'Can', duracao: '3:00' }]),
     oembed: oembed || (async (id) => ({ titulo: `Título ${id}`, canal: 'Canal' })),
@@ -439,4 +444,65 @@ test('falhas ao enviar (aba/offscreen ausentes) não quebram o fluxo', async () 
   h.log.abas.clear();
   await h.peer('c1', { t: 'add', videoId: V1 });
   assert.equal(h.ultimoState().fila.length, 1);
+});
+
+test('hello seguido de add sem esperar: o item já sai com o nome e o pid do hello', async () => {
+  let liberar;
+  const h = montar({ oembed: (id) => new Promise((r) => { liberar = () => r({ titulo: `T ${id}`, canal: 'C' }); }) });
+  await h.nucleo.abrirKtv();
+  // simula a trava ocupada: o hello entra na fila da trava enquanto o add já começou
+  const pHello = h.peer('c9', { t: 'hello', nome: 'Cida', pid: 'pidC' });
+  const pAdd = h.peer('c9', { t: 'add', videoId: V1 });
+  await new Promise((r) => setImmediate(r));
+  liberar();
+  await Promise.all([pHello, pAdd]);
+  const { estado } = await h.nucleo._estado();
+  const it = estado.fila[0] || estado.atual;
+  assert.equal(it.pedidoPor, 'Cida');
+  assert.equal(it.pid, 'pidC');
+});
+
+test('init: tenta de novo quando o offscreen não responde (listener ainda não registrado)', async () => {
+  const h = montar({ respostasOff: [new Error('Receiving end does not exist'), undefined, { ok: true }] });
+  await h.nucleo.init();
+  assert.equal(h.log.off.filter((m) => m.t === 'initPeer').length, 3);
+});
+
+test('init com offscreen novo zera peers/conns antigos (conexões morreram com o anterior)', async () => {
+  const storageMap = new Map();
+  const a = montar({ storageMap });
+  await a.peer('c1', { t: 'hello', nome: 'Ana', pid: 'pidA' });
+  await a.int('conns', { count: 1, signaling: true });
+  const b = montar({ storageMap, offscreenNovo: true });
+  await b.nucleo.init();
+  const { rt } = await b.nucleo._estado();
+  assert.deepEqual(rt.peers, {});
+  assert.equal(rt.conns.count, 0);
+});
+
+test('navegador reiniciado: esquece a aba KTV (IDs de aba recomeçam) e mantém a fila', async () => {
+  const h = montar();
+  await prepararKtv(h);
+  await h.peer('c1', { t: 'add', videoId: V1 });
+  await h.int('started', {}, sender());
+  await h.nucleo.navegadorIniciou();
+  // uma aba comum do YouTube que ganhou o mesmo tabId não vira a aba KTV
+  assert.equal((await h.int('whoami', {}, sender())).ktv, false);
+  const { estado, rt } = await h.nucleo._estado();
+  assert.equal(estado.atual.videoId, V1);
+  assert.equal(rt.started, false);
+  assert.deepEqual(rt.peers, {});
+});
+
+test('extensão atualizada/recarregada: recarrega a aba KTV para reinjetar o content script', async () => {
+  const h = montar();
+  await h.nucleo.extensaoAtualizada(); // sem aba KTV: nada
+  assert.equal(h.log.recargas, undefined);
+  await h.nucleo.abrirKtv();
+  await h.nucleo.extensaoAtualizada();
+  assert.deepEqual(h.log.recargas, [KTV_TAB]);
+  assert.equal((await h.int('whoami', {}, sender())).ktv, true);
+  h.log.abas.delete(KTV_TAB); // aba não existe mais: limpa a marca
+  await h.nucleo.extensaoAtualizada();
+  assert.equal((await h.int('whoami', {}, sender())).ktv, false);
 });

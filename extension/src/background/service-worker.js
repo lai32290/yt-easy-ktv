@@ -41,6 +41,15 @@ const janelas = {
       return false;
     }
   },
+  // Recarrega a aba (reinjeta o content script); false se ela não existe mais.
+  async recarregar(tabId) {
+    try {
+      await chrome.tabs.reload(tabId);
+      return true;
+    } catch {
+      return false;
+    }
+  },
 };
 
 const nucleo = criarNucleo({
@@ -66,6 +75,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 chrome.action.onClicked.addListener(() => { nucleo.abrirKtv().catch((e) => console.error('[KTV sw]', e)); });
 chrome.tabs.onRemoved.addListener((tabId) => { nucleo.abaFechada(tabId).catch(() => {}); });
 chrome.windows.onRemoved.addListener((windowId) => { nucleo.janelaFechada(windowId).catch(() => {}); });
+chrome.runtime.onStartup.addListener(() => { nucleo.navegadorIniciou().catch((e) => console.error('[KTV sw]', e)); });
+chrome.runtime.onInstalled.addListener(({ reason }) => {
+  if (reason === 'update') nucleo.extensaoAtualizada().catch((e) => console.error('[KTV sw]', e));
+});
 
 // Override da sinalização alterado em runtime (testes/servidor próprio): reenvia initPeer.
 chrome.storage.onChanged.addListener((mudancas, area) => {

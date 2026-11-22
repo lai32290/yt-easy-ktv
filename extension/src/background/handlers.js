@@ -6,7 +6,7 @@
 //   send(msg)              -> mensagem interna ao offscreen (devolve a resposta, se houver)
 //   sendToTab(tabId, msg)  -> mensagem ao content script da aba KTV
 //   ensureOffscreen()      -> garante o offscreen document
-//   janelas   { criar(url) -> {tabId, windowId}, focar(tabId, windowId) -> boolean }
+//   janelas   { criar(url) -> {tabId, windowId}, focar(tabId, windowId) -> boolean, recarregar?(tabId) -> boolean }
 //   buscar(q, {karaoke}), oembed(videoId)
 //   now(), uuid(), sleep(ms), log(...)
 import {
@@ -113,7 +113,14 @@ export function criarNucleo(deps) {
   // ---------- inicialização ----------
   async function init() {
     await carregar();
-    await ensureOffscreen();
+    if (await ensureOffscreen()) {
+      // Offscreen novo: as conexões antigas morreram com o anterior (sem peerClose).
+      await travar(async () => {
+        rt.peers = {};
+        rt.conns = { count: 0, signaling: false };
+        await salvarRt();
+      });
+    }
     const sobre = await storage.get(KEY_SIGNALING);
     const signaling = sobre && typeof sobre === 'object' ? sobre : CONFIG.SIGNALING;
     const msg = { t: INT.INIT_PEER, signaling };
@@ -121,8 +128,9 @@ export function criarNucleo(deps) {
     // O offscreen confirma com { ok }; recém-criado pode demorar a registrar o listener.
     for (let i = 0; i < 4; i++) {
       const r = await seguro(() => send({ ...msg, target: TARGET.OFFSCREEN }));
-      if (r && r.ok === false) { await sleep(300 * (i + 1)); continue; }
-      break;
+      // Sem resposta (listener ainda não registrado) ou ok:false: tenta de novo.
+      if (r && r.ok !== false) break;
+      if (i < 3) await sleep(300 * (i + 1));
     }
   }
 
@@ -153,6 +161,20 @@ export function criarNucleo(deps) {
     rt.ktvTabId = null; rt.ktvWindowId = null; rt.started = false;
     await salvarRt();
   }
+  // Navegador recém-aberto: os IDs de aba/janela recomeçam do zero, então o tabId salvo
+  // poderia apontar para uma aba qualquer do YouTube. A fila (estado) é mantida.
+  const navegadorIniciou = () => travar(async () => {
+    rt.peers = {};
+    rt.conns = { count: 0, signaling: false };
+    return limparKtvDentro();
+  });
+  // Extensão recarregada/atualizada: o content script da aba KTV ficou órfão.
+  // Recarrega a aba para reinjetar o script (fila e sala vêm do storage).
+  const extensaoAtualizada = () => travar(async () => {
+    if (rt.ktvTabId == null || !janelas.recarregar) return;
+    const ok = await seguro(() => janelas.recarregar(rt.ktvTabId));
+    if (ok === false) await limparKtvDentro();
+  });
 
   // ---------- mensagens do celular ----------
   function resolverMetadados(videoId) {
@@ -186,9 +208,15 @@ export function criarNucleo(deps) {
       return erroPara(ERR.MSG_INVALIDA);
     }
     await carregar();
-    const peer = rt.peers[connId] || {};
-    const pid = (typeof pidEnvelope === 'string' && pidEnvelope) || peer.pid || String(connId);
-    const nome = peer.nome || 'Convidado';
+    // Identidade lida DENTRO das seções travadas: um `hello` ainda na fila da trava
+    // (ex.: hello e add em sequência rápida) já terá sido aplicado quando ela for usada.
+    const quem = () => {
+      const peer = rt.peers[connId] || {};
+      return {
+        pid: (typeof pidEnvelope === 'string' && pidEnvelope) || peer.pid || String(connId),
+        nome: peer.nome || 'Convidado',
+      };
+    };
 
     switch (msg.t) {
       case C2E.HELLO: {
@@ -237,11 +265,12 @@ export function criarNucleo(deps) {
           log('oEmbed falhou:', e?.message || e);
           return erroPara(ERR.VIDEO_INDISPONIVEL);
         }
-        const item = {
-          itemId: uuid(), videoId, titulo: meta.titulo, canal: meta.canal || '', duracao: meta.duracao || '',
-          pedidoPor: nome, pid, addedAt: now(),
-        };
         return travar(async () => {
+          const { nome, pid } = quem();
+          const item = {
+            itemId: uuid(), videoId, titulo: meta.titulo, canal: meta.canal || '', duracao: meta.duracao || '',
+            pedidoPor: nome, pid, addedAt: now(),
+          };
           const r = enqueue(estado, item); // dedup de novo: outra mensagem pode ter entrado durante o oEmbed
           if (r.erro) return erroPara(r.erro);
           estado = r.estado;
@@ -256,7 +285,7 @@ export function criarNucleo(deps) {
       case C2E.REMOVE: {
         if (typeof msg.itemId !== 'string') return erroPara(ERR.MSG_INVALIDA);
         return travar(async () => {
-          const r = remove(estado, msg.itemId, pid);
+          const r = remove(estado, msg.itemId, quem().pid);
           if (r.erro) return erroPara(r.erro);
           estado = r.estado;
           await salvarEstado();
@@ -365,7 +394,7 @@ export function criarNucleo(deps) {
   }
 
   return {
-    init, handleMessage, abrirKtv, abaFechada, janelaFechada,
+    init, handleMessage, abrirKtv, abaFechada, janelaFechada, navegadorIniciou, extensaoAtualizada,
     // Só para testes/diagnóstico.
     _estado: async () => { await carregar(); return { estado, rt }; },
   };
