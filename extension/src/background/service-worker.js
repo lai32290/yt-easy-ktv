@@ -1,7 +1,7 @@
 // Service worker (MV3, type: module): fonte da verdade da fila.
 // Só liga chrome.* ao núcleo de handlers.js; o estado fica em chrome.storage.local
 // (o SW pode ser suspenso a qualquer momento, então nada depende de variáveis globais).
-import { criarNucleo } from './handlers.js';
+import { criarNucleo, KEY_SIGNALING } from './handlers.js';
 import { buscar } from './search.js';
 import { oembed } from './meta.js';
 
@@ -66,6 +66,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 chrome.action.onClicked.addListener(() => { nucleo.abrirKtv().catch((e) => console.error('[KTV sw]', e)); });
 chrome.tabs.onRemoved.addListener((tabId) => { nucleo.abaFechada(tabId).catch(() => {}); });
 chrome.windows.onRemoved.addListener((windowId) => { nucleo.janelaFechada(windowId).catch(() => {}); });
+
+// Override da sinalização alterado em runtime (testes/servidor próprio): reenvia initPeer.
+chrome.storage.onChanged.addListener((mudancas, area) => {
+  if (area === 'local' && mudancas[KEY_SIGNALING]) nucleo.init().catch((e) => console.error('[KTV sw]', e));
+});
 
 // Roda a cada início do SW (instalação, browser aberto, acordar por mensagem): garante o offscreen.
 nucleo.init().catch((e) => console.error('[KTV sw] init falhou', e));

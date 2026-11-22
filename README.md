@@ -37,15 +37,28 @@ Requer Node 20+ (só em desenvolvimento).
 ```bash
 npm install        # instala o servidor PeerJS local (devDependency "peer") usado nos testes e2e
 npm test           # testes unitários (node --test)
-npm run test:e2e   # testes de ponta a ponta (tests/e2e, Playwright instalado globalmente)
+npm run test:e2e   # integração com Chromium real (tests/e2e; Playwright instalado globalmente)
 npm run sync       # copia extension/src/shared/protocol.js -> web/protocol.js
 npm run build      # gera dist/ktv-extension.zip (conteúdo de extension/)
 ```
 
+### Testes e2e (Chromium real + extensão)
+
+`npm run test:e2e` roda um arquivo por vez (`--test-concurrency=1`), cada teste com ambiente novo (~3 a 10 s; a suíte toda leva alguns minutos). Requisitos: Chromium e `playwright` instalados (o `playwright` é resolvido do módulo global; não rodar `playwright install`).
+
+O que sobe em cada teste (`tests/e2e/helpers/`):
+
+- Chromium (`--headless=new`, contexto persistente) com a extensão `extension/` carregada; o service worker é apontado para a sinalização local pela chave `ktv_signaling` (o SW reenvia `initPeer` quando ela muda). `0.peerjs.com` é bloqueado por DNS para nunca tocar a rede pública.
+- Servidor PeerJS local (`peer`, processo filho em `127.0.0.1`, porta livre) que o teste derruba/religa para simular queda.
+- **YouTube falso** via `context.route('https://www.youtube.com/**')` (inclui o `fetch` do service worker, com `PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1`): `/?ktv=1` e `/watch?v=ID` com `<ytd-app>`, `<video class="html5-main-video">` e um WAV curto gerado em memória; `/oembed`; `/results` (fixtures de `tests/fixtures/`); vídeos "indisponíveis" por ID (`.ytp-error`); navegação SPA ou recarga completa; e autoplay do "recomendado" ao terminar, para provar que o KTV o contém.
+- Site do celular (`web/`) servido por um HTTP estático local e aberto em **contextos isolados** de um segundo navegador (cada "celular" tem seu `localStorage`/`pid`) em `#sala=<ID>&sig=127.0.0.1:<porta>&secure=0`.
+
+Cenários (um arquivo por critério de aceite do MVP): `01` janela KTV/QR · `02` celular conecta · `03` busca, links e duplicata · `04` fila com 2 celulares, remover só o dono, pular · `05` próxima música sozinha, autoplay contido, modo ocioso · `06` vídeo indisponível · `07` reinício do service worker e perda do offscreen · `08` reconexão do celular e queda da sinalização · `09` contrato de mensagens. O que não é automatizável (YouTube real, anúncios, iOS, Wi-Fi real) está em [`docs/TESTE-MANUAL.md`](docs/TESTE-MANUAL.md).
+
 ### Sinalização alternativa (testes / servidor próprio)
 
 - **Celular:** acrescente ao link `#sala=ID&sig=host:porta&secure=0` (ex.: `#sala=abc&sig=192.168.0.10:9000&secure=0`).
-- **Extensão:** em `chrome.storage.local`, a chave `ktv_signaling` com `{ "host": "...", "port": 9000, "path": "/", "secure": false }`. Ela substitui `CONFIG.SIGNALING` (defina-a no console do service worker: `chrome.storage.local.set({ktv_signaling:{host:'192.168.0.10',port:9000,path:'/',secure:false}})`).
+- **Extensão:** em `chrome.storage.local`, a chave `ktv_signaling` com `{ "host": "...", "port": 9000, "path": "/", "secure": false }`. Ela substitui `CONFIG.SIGNALING` e vale na hora (o service worker reinicia o Peer quando a chave muda) (defina-a no console do service worker: `chrome.storage.local.set({ktv_signaling:{host:'192.168.0.10',port:9000,path:'/',secure:false}})`).
 - Para trocar o padrão de vez, edite `CONFIG.SIGNALING` em `protocol.js` e rode `npm run sync`.
 
 ## Limitações

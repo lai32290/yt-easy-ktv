@@ -41,6 +41,11 @@ export function backoffDelay(tentativa, min = 1000, max = 15000) {
   return Math.min(max, min * 2 ** Math.min(n, 20));
 }
 
+/** Erros do PeerJS que indicam só a queda do servidor de sinalização (a conexão P2P aberta segue valendo). */
+export function erroSoDeSinalizacao(tipo) {
+  return ['network', 'socket-error', 'socket-closed', 'server-error'].includes(tipo);
+}
+
 /** Só o dono do pedido pode remover o item. */
 export function podeRemover(item, pid) {
   return !!item && typeof pid === 'string' && pid !== '' && item.pid === pid;

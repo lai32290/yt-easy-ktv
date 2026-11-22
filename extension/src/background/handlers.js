@@ -321,6 +321,8 @@ export function criarNucleo(deps) {
 
       case INT.WHOAMI:
         await carregar();
+        // Offscreen sumiu com o SW vivo (ex.: renderer caiu): recria e religa o Peer com a mesma sala.
+        if (doKtv(sender)) await seguro(async () => { if (await ensureOffscreen()) await init(); });
         return { ktv: doKtv(sender), ...dadosPainel() };
 
       case INT.STARTED:

@@ -3,7 +3,7 @@
 import { CONFIG, C2E, E2C, ERR_TEXT, thumbUrl } from './protocol.js';
 import {
   parseHash, resolverSinalizacao, backoffDelay, podeRemover, podePular, textoErro,
-  resultadoVale, normalizarState, idsNoEstado, normalizarResultados,
+  resultadoVale, normalizarState, idsNoEstado, normalizarResultados, erroSoDeSinalizacao,
 } from './logic.js';
 
 const $ = (id) => document.getElementById(id);
@@ -181,6 +181,8 @@ function conectar() {
   p.on('error', (err) => {
     if (!vivo()) return;
     const tipo = err && err.type;
+    // Queda só da sinalização com o P2P aberto: não derruba a conexão com o KTV (o 'disconnected' já cuida do resto).
+    if (conn && conn.open && erroSoDeSinalizacao(tipo)) return;
     let det = 'Não foi possível conectar.';
     if (tipo === 'peer-unavailable') det = 'Sala não encontrada. O KTV está aberto no computador?';
     else if (tipo === 'network' || tipo === 'socket-error' || tipo === 'socket-closed' || tipo === 'server-error') det = 'Sem acesso ao servidor de conexão.';
@@ -442,6 +444,15 @@ function iniciar() {
       falhou('desconectado', 'A conexão com o KTV caiu.');
     }
   });
+
+  // Fechar/sair da página: encerra a conexão de forma limpa para o KTV não manter um "celular fantasma"
+  // (sem isso o canal de dados só é dado como morto depois de muito tempo).
+  window.addEventListener('pagehide', () => {
+    clearTimeout(retryTimer); retryTimer = null; clearInterval(tickTimer);
+    limparConexao();
+  });
+  // Voltou do cache de navegação (bfcache, comum no iOS): reconecta.
+  window.addEventListener('pageshow', (e) => { if (e.persisted) reconectarManual(); });
 
   mostrarNome(!nome);
   renderFila();

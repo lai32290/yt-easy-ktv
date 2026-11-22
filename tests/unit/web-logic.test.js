@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseHash, resolverSinalizacao, backoffDelay, podeRemover, podePular, textoErro,
-  resultadoVale, normalizarState, idsNoEstado, normalizarResultados,
+  resultadoVale, normalizarState, idsNoEstado, normalizarResultados, erroSoDeSinalizacao,
 } from '../../web/logic.js';
 import { CONFIG, ERR, ERR_TEXT } from '../../web/protocol.js';
 
@@ -84,4 +84,9 @@ test('normalizarResultados descarta itens sem videoId', () => {
   const r = normalizarResultados([{ videoId: 'x', titulo: 'a' }, { titulo: 'sem' }, 5]);
   assert.equal(r.length, 1);
   assert.deepEqual(normalizarResultados('x'), []);
+});
+
+test('erroSoDeSinalizacao reconhece só erros do servidor de sinalização', () => {
+  for (const t of ['network', 'socket-error', 'socket-closed', 'server-error']) assert.equal(erroSoDeSinalizacao(t), true);
+  for (const t of ['peer-unavailable', 'webrtc', 'browser-incompatible', undefined]) assert.equal(erroSoDeSinalizacao(t), false);
 });

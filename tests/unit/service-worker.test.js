@@ -346,6 +346,17 @@ test('whoami: ktv só para o tabId guardado; devolve dados do painel', async () 
   assert.equal((await h.int('whoami', {}, undefined)).ktv, false);
 });
 
+test('whoami da aba KTV recria o offscreen que sumiu e reenvia initPeer com a sala salva', async () => {
+  const h = montar({ offscreenExiste: true }); // ensureOffscreen devolve true = acabou de criar
+  await h.int('room', { roomId: 'sala-9' });
+  await h.nucleo.abrirKtv();
+  h.log.off.length = 0;
+  await h.int('whoami', {}, sender(8)); // aba qualquer: não mexe no offscreen
+  assert.equal(h.log.off.filter((m) => m.t === 'initPeer').length, 0);
+  await h.int('whoami', {}, sender());
+  assert.equal(h.log.off.find((m) => m.t === 'initPeer').roomId, 'sala-9');
+});
+
 test('janela KTV: cria uma vez, foca nas seguintes e recria se a aba sumiu', async () => {
   const h = montar();
   await h.nucleo.abrirKtv();

@@ -520,7 +520,9 @@
     if (iniciou) {
       // recarga da página no meio de uma música: avisa o SW e retoma o que estava tocando
       enviar({ t: INT.STARTED });
-      if (atual && atual.videoId && urlVideoId() === atual.videoId && quem.state.tocando !== false) {
+      // Também quando a página recarregou em OUTRO vídeo (ex.: autoplay do YouTube em carga completa
+      // venceu a corrida com o `play` do SW, que se perdeu): navega de volta para a música atual.
+      if (atual && atual.videoId && quem.state.tocando !== false) {
         iniciarSessao(atual.videoId);
       }
     } else {
