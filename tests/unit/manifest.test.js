@@ -25,9 +25,9 @@ test('manifest é MV3 válido', () => {
   assert.equal(manifest.manifest_version, 3);
   assert.ok(manifest.name && manifest.version, 'name e version obrigatórios');
   assert.match(manifest.version, /^\d+(\.\d+){0,3}$/);
-  for (const p of ['offscreen', 'storage', 'tabs', 'windows']) {
-    assert.ok(manifest.permissions.includes(p), `permissão ausente: ${p}`);
-  }
+  // Só o necessário: chrome.tabs/chrome.windows não exigem permissão ('windows' nem existe e gera aviso;
+  // 'tabs' só daria acesso a url/título de todas as abas, que o KTV não usa).
+  assert.deepEqual([...manifest.permissions].sort(), ['offscreen', 'storage']);
   assert.ok(manifest.host_permissions.includes('https://www.youtube.com/*'));
   assert.ok(manifest.background?.service_worker, 'service_worker ausente');
   assert.ok(manifest.content_scripts?.length, 'content_scripts ausente');

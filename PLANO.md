@@ -19,7 +19,7 @@ Legenda: `[ ]` pendente · `[~]` implementado, falta validar com YouTube/celular
 ## M1 — Esqueleto e P2P (sem YouTube)
 
 **Extensão**
-- [x] **T1.1 `manifest.json` MV3.** _(e2e: a extensão carrega no Chromium e o content script injeta no youtube.com)_ Permissões `offscreen`, `storage`, `tabs`, `windows`; `host_permissions` `https://www.youtube.com/*`; `background.service_worker`; `content_scripts` (matches youtube, `document_idle`). Entrega: extensão carrega em `chrome://extensions` (modo desenvolvedor) sem erros. Dep: T0.1.
+- [x] **T1.1 `manifest.json` MV3.** _(e2e: a extensão carrega no Chromium e o content script injeta no youtube.com)_ Permissões `offscreen`, `storage` (as APIs `chrome.tabs`/`chrome.windows` usadas não exigem permissão; `windows` nem existe e geraria aviso); `host_permissions` `https://www.youtube.com/*`; `background.service_worker`; `content_scripts` (matches youtube, `document_idle`). Entrega: extensão carrega em `chrome://extensions` (modo desenvolvedor) sem erros. Dep: T0.1.
 - [x] **T1.2 Service worker mínimo.** _(e2e: um único offscreen document; recriado se sumir)_ Ao iniciar, garantir o offscreen document (`chrome.offscreen.hasDocument`/`createDocument`, reason `WEB_RTC`). Entrega: log mostrando o offscreen criado, sem duplicar. Dep: T1.1.
 - [x] **T1.3 Offscreen: criar o Peer.** `offscreen.html` + `offscreen.js` instanciam `new Peer()`; ao `open`, enviam `roomId` ao service worker via `chrome.runtime.sendMessage`. Entrega: ID da sala visível no log do SW. Dep: T1.2, T0.3.
 - [x] **T1.4 Offscreen: aceitar conexões.** `peer.on('connection')`, manter lista de conexões abertas, remover ao fechar. Repassar mensagens recebidas ao SW. Dep: T1.3, T0.4.

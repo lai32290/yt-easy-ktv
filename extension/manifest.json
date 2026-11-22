@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Karaokê no YouTube com fila pedida pelos celulares (P2P).",
   "minimum_chrome_version": "116",
-  "permissions": ["offscreen", "storage", "tabs", "windows"],
+  "permissions": ["offscreen", "storage"],
   "host_permissions": ["https://www.youtube.com/*"],
   "background": {
     "service_worker": "src/background/service-worker.js",
