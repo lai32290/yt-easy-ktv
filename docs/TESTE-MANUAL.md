@@ -52,6 +52,7 @@ Preparação: Chrome 116+ com a extensão carregada (modo desenvolvedor), um per
 - [ ] **Duplicata:** o mesmo vídeo duas vezes (por formatos de link diferentes) é recusado com "Essa música já está na fila.".
 - [ ] **Dois celulares:** veem a **mesma fila** ao mesmo tempo; o botão "Remover" aparece só nos itens de cada um; "Pular" aparece para todos.
 - [ ] **插播 (furar a fila):** com 2+ músicas na fila, toque em "Tocar a seguir" num resultado da busca (ou na aba Colar link): a música entra no topo da fila com o selo 插播, logo depois da atual. Um segundo 插播 fica **depois** do primeiro. "Passar pra frente" num item da fila o move para o topo (sem o selo). Fila vazia: toca direto, igual a "Adicionar".
+- [ ] **Limpar lista:** com itens na fila, "Limpar lista" (aba Fila) pede um segundo toque ("Toque de novo para limpar", volta ao normal após 4 s). Confirmando, as próximas somem para **todos** os celulares e a música atual continua tocando. Sem itens na fila, o botão não aparece.
 - [ ] Nome com acentos/emoji e nome muito longo (máx. 30) aparecem corretamente em "pedido por".
 
 ## 5. Robustez

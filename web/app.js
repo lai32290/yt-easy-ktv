@@ -3,7 +3,7 @@
 import { CONFIG, C2E, E2C, ERR_TEXT, thumbUrl } from './protocol.js';
 import {
   parseHash, resolverSinalizacao, backoffDelay, podeRemover, podePular, textoErro,
-  resultadoVale, normalizarState, idsNoEstado, normalizarResultados, erroSoDeSinalizacao, linkDaAreaDeTransferencia,
+  podeLimpar, resultadoVale, normalizarState, idsNoEstado, normalizarResultados, erroSoDeSinalizacao, linkDaAreaDeTransferencia,
   acaoPlayPausa, acaoMudo,
 } from './logic.js';
 import { qrDados, qrSvg } from './qr.js';
@@ -258,6 +258,25 @@ function aoReceber(msg) {
 }
 
 // ---------- Fila ----------
+// "Limpar lista" pede um segundo toque para confirmar (apaga a fila de todo mundo).
+let limparTimer = null;
+function desarmarLimpar() {
+  clearTimeout(limparTimer);
+  limparTimer = null;
+  const b = $('queue-clear');
+  if (b) b.textContent = 'Limpar lista';
+}
+function ligarLimpar() {
+  $('queue-clear').addEventListener('click', () => {
+    if (limparTimer === null) {
+      $('queue-clear').textContent = 'Toque de novo para limpar';
+      limparTimer = setTimeout(desarmarLimpar, 4000);
+      return;
+    }
+    desarmarLimpar();
+    enviar({ t: C2E.CLEAR });
+  });
+}
 function renderFila() {
   const st = lastState;
   const now = $('now-playing');
@@ -293,6 +312,9 @@ function renderFila() {
   const fila = st ? st.fila : [];
   $('queue-count').textContent = fila.length ? `(${fila.length})` : '';
   $('queue-empty').hidden = !st || fila.length > 0;
+  const limparBtn = $('queue-clear');
+  limparBtn.hidden = !(st && fila.length > 0 && podeLimpar(CONFIG.CLEAR_POLICY));
+  if (limparBtn.hidden) desarmarLimpar();
 
   fila.forEach((it, i) => {
     const li = el('li', 'item');
@@ -557,6 +579,7 @@ function iniciar() {
   window.addEventListener('pageshow', (e) => { if (e.persisted) reconectarManual(); });
 
   ligarControle();
+  ligarLimpar();
   mostrarNome(!nome);
   renderFila();
   renderControle();

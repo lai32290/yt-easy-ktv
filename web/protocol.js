@@ -8,6 +8,8 @@ export const CONFIG = {
   SITE_URL: 'https://lai32290.github.io/yt-easy-ktv/',
   // Quem pode pular a música atual: 'todos' | 'anfitriao' (anfitrião = fase opcional).
   SKIP_POLICY: 'todos',
+  // Quem pode limpar a fila: 'todos' | 'anfitriao' (mesma lógica do SKIP_POLICY).
+  CLEAR_POLICY: 'todos',
   KARAOKE_SUFFIX: ' karaokê',
   MAX_RESULTS: 12,
   VIDEO_ID_RE: /^[\w-]{11}$/,
@@ -23,6 +25,7 @@ export const C2E = {
   REMOVE: 'remove', // { itemId }
   SKIP: 'skip',     // { itemId? }  itemId = música que o celular quer pular (pulo repetido/atrasado é ignorado)
   MOVE: 'move',     // { itemId, toIndex }  (opcional)
+  CLEAR: 'clear',   // {}  esvazia as próximas (a música atual continua tocando)
   CONTROL: 'control', // { acao }  acao ∈ ACOES_CONTROLE (controle do player da música atual)
 };
 

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  criarEstado, enqueue, enqueueProximo, remove, avancar, mover, publico,
+  criarEstado, enqueue, enqueueProximo, limpar, remove, avancar, mover, publico,
 } from '../../extension/src/background/queue.js';
 
 const item = (n, pid = 'p1') => ({
@@ -116,4 +116,14 @@ test('mover: tirar um 插播 do lugar limpa a marca', () => {
   e = mover(e, 'i3', 2).estado;
   assert.deepEqual(e.fila.map((i) => i.itemId), ['i1', 'i2', 'i3']);
   assert.ok(e.fila.every((i) => !i.furou));
+});
+
+test('limpar: esvazia a fila, mantém a atual e não muta o original', () => {
+  let e = criarEstado({ atual: item(9), tocando: true });
+  for (const n of [1, 2]) e = enqueue(e, item(n)).estado;
+  const { estado } = limpar(e);
+  assert.deepEqual(estado.fila, []);
+  assert.equal(estado.atual.itemId, 'i9');
+  assert.equal(estado.tocando, true);
+  assert.equal(e.fila.length, 2);
 });

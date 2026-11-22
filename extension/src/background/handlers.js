@@ -14,7 +14,7 @@ import {
   CONFIG, C2E, E2C, INT, TARGET, ERR, ERR_TEXT, ACOES_CONTROLE,
 } from '../shared/protocol.js';
 import {
-  criarEstado, enqueue, enqueueProximo, remove, avancar, mover, publico,
+  criarEstado, enqueue, enqueueProximo, remove, limpar, avancar, mover, publico,
 } from './queue.js';
 import { parseUrl } from './url.js';
 
@@ -323,6 +323,16 @@ export function criarNucleo(deps) {
         return travar(async () => {
           if (!estado.atual || !rt.started) return undefined; // nada tocando: ignora
           return aoContent({ t: INT.CONTROL, acao: msg.acao });
+        });
+      }
+
+      case C2E.CLEAR: {
+        if (CONFIG.CLEAR_POLICY !== 'todos') return erroPara(ERR.SEM_PERMISSAO);
+        return travar(async () => {
+          if (estado.fila.length === 0) return undefined;
+          estado = limpar(estado).estado;
+          await salvarEstado();
+          return difundirEstado();
         });
       }
 

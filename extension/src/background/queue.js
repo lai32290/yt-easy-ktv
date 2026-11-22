@@ -36,6 +36,11 @@ export function remove(estado, itemId, pid) {
   return { estado: { ...estado, fila: estado.fila.filter((_, i) => i !== idx) } };
 }
 
+// Esvazia as próximas; a música atual não está na fila e continua tocando.
+export function limpar(estado) {
+  return { estado: { ...estado, fila: [] } };
+}
+
 // O próximo da fila vira `atual`; fila vazia deixa tudo ocioso.
 export function avancar(estado) {
   if (estado.fila.length === 0) return { estado: { ...estado, atual: null, tocando: false } };

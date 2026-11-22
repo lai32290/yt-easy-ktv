@@ -56,6 +56,11 @@ export function podePular(policy) {
   return policy === 'todos';
 }
 
+/** Botão "Limpar lista" visível? */
+export function podeLimpar(policy) {
+  return policy === 'todos';
+}
+
 /** Texto do erro: usa `msg` se vier, senão a tabela pt-BR. */
 export function textoErro(err, errText) {
   const msg = err && typeof err.msg === 'string' ? err.msg.trim() : '';

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  parseHash, resolverSinalizacao, backoffDelay, podeRemover, podePular, textoErro,
+  parseHash, resolverSinalizacao, backoffDelay, podeRemover, podePular, podeLimpar, textoErro,
   resultadoVale, normalizarState, idsNoEstado, normalizarResultados, erroSoDeSinalizacao, linkDaAreaDeTransferencia,
   acaoPlayPausa, acaoMudo,
 } from '../../web/logic.js';
@@ -118,4 +118,9 @@ test('normalizarState preserva furou só quando é true', () => {
   assert.equal(s.fila[0].furou, true);
   assert.ok(!('furou' in s.fila[1]));
   assert.ok(!('furou' in s.fila[2]));
+});
+
+test('podeLimpar segue a política', () => {
+  assert.equal(podeLimpar('todos'), true);
+  assert.equal(podeLimpar('anfitriao'), false);
 });
