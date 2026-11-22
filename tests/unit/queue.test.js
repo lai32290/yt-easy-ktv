@@ -21,16 +21,18 @@ test('enqueue: adiciona sem mutar o estado original', () => {
   assert.equal(e0.fila.length, 0);
 });
 
-test('enqueue: bloqueia videoId já na fila', () => {
+test('enqueue: permite o mesmo videoId já na fila', () => {
   let { estado } = enqueue(criarEstado(), item(1));
   const r = enqueue(estado, { ...item(2), videoId: item(1).videoId });
-  assert.equal(r.erro, 'duplicado');
-  assert.equal(r.estado.fila.length, 1);
+  assert.equal(r.erro, undefined);
+  assert.equal(r.estado.fila.length, 2);
 });
 
-test('enqueue: bloqueia videoId igual ao atual', () => {
+test('enqueue: permite videoId igual ao atual', () => {
   const e = { ...criarEstado(), atual: item(1), tocando: true };
-  assert.equal(enqueue(e, { ...item(2), videoId: item(1).videoId }).erro, 'duplicado');
+  const r = enqueue(e, { ...item(2), videoId: item(1).videoId });
+  assert.equal(r.erro, undefined);
+  assert.equal(r.estado.fila.length, 1);
 });
 
 test('remove: dono remove o próprio item', () => {

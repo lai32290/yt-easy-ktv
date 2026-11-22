@@ -163,27 +163,30 @@ test('painel: content da aba KTV recebe `panel` a cada mudança', async () => {
   assert.equal(p.state.fila.length, 1);
 });
 
-test('dedup: mesmo videoId na fila ou tocando -> error duplicado só para quem pediu', async () => {
+test('duplicado: mesmo videoId na fila ou tocando é aceito (itens distintos)', async () => {
   const h = montar();
   await prepararKtv(h);
   await h.peer('c1', { t: 'add', videoId: V1 });
   await h.peer('c2', { t: 'add', url: `https://www.youtube.com/watch?v=${V1}&list=PL1` });
-  assert.equal(h.paraConn('c2').at(-1).codigo, 'duplicado');
-  assert.equal(h.ultimoState().fila.length, 1);
+  assert.equal(h.paraConn('c2').some((m) => m.codigo === 'duplicado'), false);
+  let fila = h.ultimoState().fila;
+  assert.equal(fila.length, 2);
+  assert.notEqual(fila[0].itemId, fila[1].itemId);
   await h.int('started', {}, sender());
-  await h.peer('c2', { t: 'add', videoId: V1 }); // agora é o atual
-  assert.equal(h.paraConn('c2').at(-1).codigo, 'duplicado');
+  await h.peer('c2', { t: 'add', videoId: V1 }); // V1 já é o atual
+  assert.equal(h.paraConn('c2').some((m) => m.codigo === 'duplicado'), false);
+  assert.equal(h.ultimoState().fila.length, 2);
 });
 
-test('add: adds concorrentes do mesmo vídeo não duplicam', async () => {
+test('add: adds concorrentes do mesmo vídeo entram os dois', async () => {
   const h = montar({ oembed: async (id) => { await new Promise((r) => setTimeout(r, 5)); return { titulo: id, canal: '' }; } });
   await prepararKtv(h);
   await Promise.all([
     h.peer('c1', { t: 'add', videoId: V1 }),
     h.peer('c2', { t: 'add', videoId: V1 }),
   ]);
-  assert.equal((await h.nucleo._estado()).estado.fila.length, 1);
-  assert.equal(h.paraConn('c2').some((m) => m.codigo === 'duplicado') || h.paraConn('c1').some((m) => m.codigo === 'duplicado'), true);
+  assert.equal((await h.nucleo._estado()).estado.fila.length, 2);
+  assert.equal(h.paraConn('c1').concat(h.paraConn('c2')).some((m) => m.codigo === 'duplicado'), false);
 });
 
 test('add: link inválido, videoId inválido e msg sem campos', async () => {

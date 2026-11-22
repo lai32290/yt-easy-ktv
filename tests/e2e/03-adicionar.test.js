@@ -1,4 +1,4 @@
-// Critério: "posso buscar uma música e colar um link; ambos adicionam à fila; duplicata recusada".
+// Critério: "posso buscar uma música e colar um link; ambos adicionam à fila; duplicata aceita".
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { comAmbiente } from './helpers/ambiente.js';
@@ -23,11 +23,11 @@ test('c) buscar (com /results simulado) e adicionar à fila', { timeout: 120000 
   // Resultado vindo da busca não precisa de oEmbed.
   assert.equal(amb.yt.pedidos.filter((p) => p.tipo === 'oembed').length, 0);
 
-  // O mesmo resultado agora aparece como "Na fila" (desabilitado).
+  // O mesmo resultado aparece como "Adicionar de novo" (habilitado: duplicata é permitida).
   const btn = cel.page.getByTestId('result-item').nth(1).getByTestId('add-btn');
   await btn.waitFor();
-  assert.equal(await btn.textContent(), 'Na fila');
-  assert.ok(await btn.isDisabled());
+  assert.equal(await btn.textContent(), 'Adicionar de novo');
+  assert.ok(await btn.isEnabled());
 
   // Sufixo desligado: a consulta vai sem "karaokê".
   await cel.page.locator('#karaoke-check').uncheck();
@@ -88,17 +88,15 @@ test('c) colar link: youtu.be, watch?v= (com &list= ignorado) e shorts', { timeo
   assert.equal((await cel.estado()).fila.length, 4);
 }));
 
-test('c) duplicata e link inválido são recusados com mensagem em pt-BR', { timeout: 120000 }, () => comAmbiente('duplicata', async (amb) => {
+test('c) duplicata é aceita; link inválido é recusado com mensagem em pt-BR', { timeout: 120000 }, () => comAmbiente('duplicata', async (amb) => {
   await amb.prepararKtv({ iniciar: false });
   const cel = await amb.novoCelular('Gabi');
   await cel.colarLink(`https://youtu.be/${ID(1)}`);
   await cel.esperarEstado((x) => x.fila.length === 1);
 
-  // mesmo vídeo por outro formato de link
+  // mesmo vídeo por outro formato de link: entra de novo
   await cel.colarLink(`https://www.youtube.com/watch?v=${ID(1)}&list=PLxyz`);
-  await cel.toastErro(ERR_TEXT.duplicado);
-  assert.equal(ERR_TEXT.duplicado, 'Essa música já está na fila.');
-  assert.equal((await cel.estado()).fila.length, 1);
+  await cel.esperarEstado((x) => x.fila.length === 2);
 
   await cel.colarLink('https://exemplo.com/nao-e-youtube');
   await cel.toastErro(ERR_TEXT.link_invalido);

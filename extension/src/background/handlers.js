@@ -264,9 +264,6 @@ export function criarNucleo(deps) {
         else return erroPara(ERR.MSG_INVALIDA);
         if (!videoId) return erroPara(ERR.LINK_INVALIDO);
 
-        const jaExiste = () => estado.atual?.videoId === videoId || estado.fila.some((i) => i.videoId === videoId);
-        if (jaExiste()) return erroPara(ERR.DUPLICADO);
-
         let meta;
         try {
           meta = await resolverMetadados(videoId);
@@ -280,7 +277,7 @@ export function criarNucleo(deps) {
             itemId: uuid(), videoId, titulo: meta.titulo, canal: meta.canal || '', duracao: meta.duracao || '',
             pedidoPor: nome, pid, addedAt: now(),
           };
-          const r = enqueue(estado, item); // dedup de novo: outra mensagem pode ter entrado durante o oEmbed
+          const r = enqueue(estado, item);
           if (r.erro) return erroPara(r.erro);
           estado = r.estado;
           const ocioso = !estado.atual && rt.started;

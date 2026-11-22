@@ -211,6 +211,10 @@ function enviar(msg) {
   return false;
 }
 
+function itemIdsNoEstado(state) {
+  return new Set([state?.atual, ...(state?.fila || [])].filter(Boolean).map((it) => it.itemId));
+}
+
 function enviarHello() {
   if (nome && conn && conn.open) {
     try { conn.send({ t: C2E.HELLO, nome, pid: meuPid }); } catch { /* ignora */ }
@@ -221,14 +225,15 @@ function enviarHello() {
 function aoReceber(msg) {
   if (!msg || typeof msg !== 'object') return;
   if (msg.t === E2C.STATE) {
-    const antes = idsNoEstado(lastState);
+    const antes = itemIdsNoEstado(lastState);
     lastState = normalizarState(msg);
-    const agora = idsNoEstado(lastState);
-    if (aguardandoAdd > 0 && [...agora].some((id) => !antes.has(id))) {
+    // O mesmo vídeo pode estar várias vezes na fila: o que conta é o itemId novo, não o videoId.
+    const novos = [lastState.atual, ...lastState.fila].filter((it) => it && !antes.has(it.itemId));
+    if (aguardandoAdd > 0 && novos.length) {
       aguardandoAdd = 0;
       toastOk('Adicionada!');
     }
-    for (const id of [...pendentes]) if (agora.has(id)) pendentes.delete(id);
+    for (const it of novos) pendentes.delete(it.videoId);
     renderFila();
     renderResultados();
   } else if (msg.t === E2C.RESULTS) {
@@ -360,10 +365,10 @@ function renderResultados() {
     const naFila = emUso.has(r.videoId);
     const enviado = pendentes.has(r.videoId);
     const b = el('button', 'btn btn-small' + (naFila || enviado ? '' : ' btn-primary'),
-      naFila ? 'Na fila' : enviado ? 'Enviando…' : 'Adicionar');
+      enviado ? 'Enviando…' : naFila ? 'Adicionar de novo' : 'Adicionar');
     b.type = 'button';
     b.setAttribute('data-testid', 'add-btn');
-    b.disabled = naFila || enviado;
+    b.disabled = enviado;
     if (!b.disabled) b.addEventListener('click', () => adicionar(r.videoId, b));
     li.append(b);
     lista.append(li);

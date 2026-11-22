@@ -52,7 +52,7 @@ test('i) toda mensagem trocada tem `t` do contrato (celular, offscreen, SW e con
   const ana = await amb.novoCelular('Ana');
   const cru = await ana.abrirCru({ pid: 'cru-1', nome: 'Cru' });
 
-  // Cenário: busca, add por url e por videoId, duplicata, link inválido, remove, move, skip, indisponível, fim.
+  // Cenário: busca, add por url e por videoId, link inválido, remove, move, skip, indisponível, fim.
   await cru.enviar({ t: C2E.SEARCH, id: 'b1', q: 'evidencias' });
   const res = await cru.esperar((m) => m.t === E2C.RESULTS && m.id === 'b1');
   assert.equal(res.itens.length, 5);
@@ -60,7 +60,6 @@ test('i) toda mensagem trocada tem `t` do contrato (celular, offscreen, SW e con
   await cru.enviar({ t: C2E.ADD, url: `https://youtu.be/${ID(1)}` });
   await cru.enviar({ t: C2E.ADD, url: `https://youtu.be/${ID(2)}` });
   await cru.enviar({ t: C2E.ADD, url: `https://youtu.be/${ID(3)}` });
-  await cru.enviar({ t: C2E.ADD, url: `https://youtu.be/${ID(1)}` });       // duplicado
   await cru.enviar({ t: C2E.ADD, url: 'nada a ver' });                      // inválido
   await cru.enviar({ t: C2E.ADD });                                         // sem videoId/url
   await cru.enviar({ t: 'zzz' });                                           // t desconhecido
@@ -79,7 +78,7 @@ test('i) toda mensagem trocada tem `t` do contrato (celular, offscreen, SW e con
   assert.ok(recebidas.length > 5);
   recebidas.forEach((m, i) => conferirE2c(m, `celular #${i}`));
   const codigos = new Set(recebidas.filter((m) => m.t === E2C.ERROR).map((m) => m.codigo));
-  for (const c of [ERR.DUPLICADO, ERR.LINK_INVALIDO, ERR.MSG_INVALIDA, ERR.NAO_ENCONTRADO, ERR.VIDEO_INDISPONIVEL]) {
+  for (const c of [ERR.LINK_INVALIDO, ERR.MSG_INVALIDA, ERR.NAO_ENCONTRADO, ERR.VIDEO_INDISPONIVEL]) {
     assert.ok(codigos.has(c), `deveria ter recebido o erro ${c}; recebeu ${[...codigos]}`);
   }
 

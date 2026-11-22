@@ -13,11 +13,8 @@ export function criarEstado(parcial = {}) {
 
 const falha = (estado, erro) => ({ estado, erro });
 
-// Bloqueia o mesmo videoId na fila ou igual ao que está tocando.
+// Adiciona ao fim da fila. O mesmo videoId pode entrar mais de uma vez (cada item tem seu itemId).
 export function enqueue(estado, item) {
-  const repetido = estado.fila.some((i) => i.videoId === item.videoId)
-    || (estado.atual && estado.atual.videoId === item.videoId);
-  if (repetido) return falha(estado, ERR.DUPLICADO);
   return { estado: { ...estado, fila: [...estado.fila, item] } };
 }
 
