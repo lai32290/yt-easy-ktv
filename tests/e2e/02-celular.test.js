@@ -14,7 +14,7 @@ test('b) celular conecta por #sala=, informa o nome e recebe o state', { timeout
   assert.equal(await cel.status(), 'conectado');
 
   const s = await cel.esperarEstado(() => true, { descricao: 'primeiro state' });
-  assert.deepEqual(s, { atual: null, fila: [], tocando: false });
+  assert.deepEqual(s, { atual: null, fila: [], tocando: false, player: { pausado: false, mudo: false, volume: 100 } });
   assert.match(await cel.page.locator('#now-playing').textContent(), /Nada tocando/);
 
   // O painel do KTV passa a contar 1 celular.

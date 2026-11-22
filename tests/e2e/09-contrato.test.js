@@ -1,8 +1,8 @@
 // Contrato: toda mensagem trocada (celular<->SW<->offscreen<->content) tem `t` válido e o formato do protocol.js.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { comAmbiente, ate } from './helpers/ambiente.js';
-import { C2E, E2C, INT, TARGET, ERR } from '../../extension/src/shared/protocol.js';
+import { comAmbiente, ate, espera } from './helpers/ambiente.js';
+import { C2E, E2C, INT, TARGET, ERR, ACOES_CONTROLE } from '../../extension/src/shared/protocol.js';
 
 const ID = (n) => `hhhhhhhhhh${n}`;
 const valores = (o) => new Set(Object.values(o));
@@ -24,6 +24,10 @@ function conferirE2c(m, onde) {
     if (m.atual) conferirItem(m.atual, `${onde} atual`);
     m.fila.forEach((i) => conferirItem(i, `${onde} fila`));
     assert.ok(!m.fila.some((i) => m.atual && i.itemId === m.atual.itemId), 'a fila não pode incluir a música atual');
+    assert.ok(m.player && typeof m.player === 'object', `${onde}: state sem player`);
+    assert.equal(typeof m.player.pausado, 'boolean');
+    assert.equal(typeof m.player.mudo, 'boolean');
+    assert.ok(Number.isInteger(m.player.volume) && m.player.volume >= 0 && m.player.volume <= 100, `${onde}: volume inválido`);
   } else if (m.t === E2C.RESULTS) {
     assert.ok(m.id !== undefined);
     assert.ok(Array.isArray(m.itens));
@@ -66,6 +70,14 @@ test('i) toda mensagem trocada tem `t` do contrato (celular, offscreen, SW e con
   await cru.enviar({ t: C2E.MOVE, itemId: 'nao-existe', toIndex: 0 });
   await cru.esperar((m) => m.t === E2C.STATE && m.atual && m.fila.length === 3, 'state com atual + 3 na fila');
   const st = (await cru.mensagens()).filter((m) => m.t === E2C.STATE).at(-1);
+  // Controle do player: ação válida vira `control` para a aba KTV; ação fora da lista é recusada.
+  // (as músicas duram 2 s: um comando que cai na troca de música se perde, então repete até pegar)
+  await cru.enviar({ t: C2E.CONTROL, acao: 'explodir' });
+  await ate(async () => {
+    await cru.enviar({ t: C2E.CONTROL, acao: 'volDown' });
+    await espera(700);
+    return (await cru.mensagens()).some((m) => m.t === E2C.STATE && m.player && m.player.volume < 100);
+  }, { descricao: 'state com o volume baixado (control -> playerStatus)' });
   await cru.enviar({ t: C2E.MOVE, itemId: st.fila[2].itemId, toIndex: 0 });
   await cru.enviar({ t: C2E.REMOVE, itemId: st.fila[0].itemId });
   await cru.enviar({ t: C2E.SKIP });
@@ -93,19 +105,23 @@ test('i) toda mensagem trocada tem `t` do contrato (celular, offscreen, SW e con
     vistos.add(m.t);
     if (dir === '->sw') {
       assert.equal(m.target, TARGET.SW);
-      assert.ok([INT.ROOM, INT.PEER_MSG, INT.CONNS, INT.PEER_CLOSE, INT.WHOAMI, INT.STARTED, INT.ENDED, INT.PLAYER_ERROR].includes(m.t), `->sw: ${m.t} inesperado`);
+      assert.ok([INT.ROOM, INT.PEER_MSG, INT.CONNS, INT.PEER_CLOSE, INT.WHOAMI, INT.STARTED, INT.ENDED, INT.PLAYER_ERROR, INT.PLAYER_STATUS].includes(m.t), `->sw: ${m.t} inesperado`);
       // 'zzz' é o `t` inválido que este próprio teste injeta (o SW deve responder msg_invalida)
       if (m.t === INT.PEER_MSG && m.msg.t !== 'zzz') assert.ok(valores(C2E).has(m.msg.t), `peerMsg com t do celular inválido "${m.msg.t}"`);
       if (m.t === INT.ROOM) assert.equal(typeof m.roomId, 'string');
       if (m.t === INT.CONNS) { assert.equal(typeof m.count, 'number'); assert.equal(typeof m.signaling, 'boolean'); }
+      if (m.t === INT.PLAYER_STATUS) {
+        assert.equal(typeof m.pausado, 'boolean'); assert.equal(typeof m.mudo, 'boolean'); assert.equal(typeof m.volume, 'number');
+      }
     } else if (dir === 'sw->runtime') {
       assert.equal(m.target, TARGET.OFFSCREEN);
       assert.ok([INT.INIT_PEER, INT.SEND, INT.BROADCAST].includes(m.t), `sw->offscreen: ${m.t} inesperado`);
       if (m.t === INT.SEND || m.t === INT.BROADCAST) conferirE2c(m.msg, `sw ${m.t}`);
     } else if (dir === 'sw->tab') {
       assert.equal(m.target, TARGET.CONTENT);
-      assert.ok([INT.PLAY, INT.IDLE, INT.PANEL].includes(m.t), `sw->content: ${m.t} inesperado`);
+      assert.ok([INT.PLAY, INT.IDLE, INT.PANEL, INT.CONTROL].includes(m.t), `sw->content: ${m.t} inesperado`);
       if (m.t === INT.PLAY) assert.match(m.videoId, /^[\w-]{11}$/);
+      if (m.t === INT.CONTROL) assert.ok(ACOES_CONTROLE.includes(m.acao), `control com ação inválida "${m.acao}"`);
       if (m.t === INT.PANEL) {
         assert.ok(m.state && Array.isArray(m.state.fila));
         assert.equal(typeof m.conns, 'number');
@@ -114,7 +130,7 @@ test('i) toda mensagem trocada tem `t` do contrato (celular, offscreen, SW e con
       }
     }
   }
-  for (const t of [INT.ROOM, INT.PEER_MSG, INT.CONNS, INT.WHOAMI, INT.STARTED, INT.ENDED, INT.PLAYER_ERROR, INT.SEND, INT.BROADCAST, INT.PLAY, INT.IDLE, INT.PANEL]) {
+  for (const t of [INT.ROOM, INT.PEER_MSG, INT.CONNS, INT.WHOAMI, INT.STARTED, INT.ENDED, INT.PLAYER_ERROR, INT.PLAYER_STATUS, INT.CONTROL, INT.SEND, INT.BROADCAST, INT.PLAY, INT.IDLE, INT.PANEL]) {
     assert.ok(vistos.has(t), `mensagem interna "${t}" nunca apareceu no cenário (cobertura do contrato)`);
   }
 }));

@@ -102,5 +102,5 @@ test('c) duplicata é aceita; link inválido é recusado com mensagem em pt-BR',
   await cel.toastErro(ERR_TEXT.link_invalido);
   await cel.colarLink('texto qualquer');
   await cel.toastErro(ERR_TEXT.link_invalido);
-  assert.equal((await cel.estado()).fila.length, 1);
+  assert.equal((await cel.estado()).fila.length, 2, 'os links inválidos não mexem na fila (as duas cópias ficam)');
 }));
