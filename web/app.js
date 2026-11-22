@@ -406,6 +406,12 @@ function iniciar() {
     getConnStatus: () => connStatus,
   });
 
+  // Novo QR lido com o site já aberto na mesma aba: o navegador só troca o hash (sem recarregar).
+  // Recarrega para entrar na sala nova em vez de continuar na antiga.
+  window.addEventListener('hashchange', () => {
+    if (parseHash(location.hash).sala !== sala) location.reload();
+  });
+
   if (!sala) {
     $('no-room').hidden = false;
     return;
