@@ -1,6 +1,6 @@
 // Lógica pura do content script (sem DOM, sem chrome.*): modelo do painel e
 // decisões do player. Importável no Node (testes) e no content script.
-import { CONFIG, roomUrl } from '../shared/protocol.js';
+import { CONFIG, CONTROLE_SALTO_S, CONTROLE_VOLUME_PASSO, roomUrl } from '../shared/protocol.js';
 
 export const MAX_PROXIMOS = 5;
 export const PLAY_TIMEOUT_MS = 15000;
@@ -174,4 +174,44 @@ export function deveSilenciar(s, obs) {
   if (!obs.emWatch || obs.pausado) return false;
   if (!s || s.endedEnviado || s.erroEnviado) return true;
   return obs.urlVideoId !== s.videoId;
+}
+
+// ---- Controle do player (aba "Controle" do celular) ----
+
+/** Estado do <video> que vai para os celulares: { pausado, mudo, volume 0-100 }. */
+export function statusPlayer(v) {
+  return {
+    pausado: Boolean(v.paused),
+    mudo: Boolean(v.muted) || v.volume === 0,
+    volume: Math.round((Number.isFinite(v.volume) ? v.volume : 1) * 100),
+  };
+}
+
+/**
+ * Aplica uma ação de ACOES_CONTROLE ao <video>. Devolve 'tocar' quando é preciso chamar play()
+ * (que é assíncrono e pode ser recusado), senão null. Ação desconhecida não faz nada.
+ */
+export function aplicarControle(v, acao) {
+  const limitar = (x, min, max) => Math.max(min, Math.min(max, x));
+  const dur = Number.isFinite(v.duration) ? v.duration : Infinity;
+  switch (acao) {
+    case 'play': return 'tocar';
+    case 'pause': v.pause(); return null;
+    case 'restart': v.currentTime = 0; return null;
+    case 'back': v.currentTime = limitar(v.currentTime - CONTROLE_SALTO_S, 0, dur); return null;
+    case 'forward': v.currentTime = limitar(v.currentTime + CONTROLE_SALTO_S, 0, dur); return null;
+    case 'mute': v.muted = true; return null;
+    case 'unmute':
+      v.muted = false;
+      if (v.volume === 0) v.volume = CONTROLE_VOLUME_PASSO / 100; // desmutar com volume 0 seria inútil
+      return null;
+    case 'volDown':
+    case 'volUp': {
+      const passo = (acao === 'volUp' ? 1 : -1) * CONTROLE_VOLUME_PASSO / 100;
+      v.volume = limitar(Math.round((v.volume + passo) * 100) / 100, 0, 1);
+      if (acao === 'volUp') v.muted = false;
+      return null;
+    }
+    default: return null;
+  }
 }

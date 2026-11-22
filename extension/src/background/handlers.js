@@ -10,7 +10,7 @@
 //   buscar(q, {karaoke}), oembed(videoId)
 //   now(), uuid(), sleep(ms), log(...)
 import {
-  CONFIG, C2E, E2C, INT, TARGET, ERR, ERR_TEXT,
+  CONFIG, C2E, E2C, INT, TARGET, ERR, ERR_TEXT, ACOES_CONTROLE,
 } from '../shared/protocol.js';
 import {
   criarEstado, enqueue, remove, avancar, mover, publico,
@@ -29,6 +29,7 @@ const MAX_CACHE_RESULTADOS = 200;
 const rtPadrao = () => ({
   ktvTabId: null, ktvWindowId: null, started: false,
   conns: { count: 0, signaling: false },
+  player: { pausado: false, mudo: false, volume: 100 }, // último estado do <video> informado pelo content
   peers: {}, // connId -> { nome, pid }
 });
 
@@ -58,6 +59,7 @@ export function criarNucleo(deps) {
       rt = { ...rtPadrao(), ...(r || {}) };
       rt.conns = { ...rtPadrao().conns, ...(rt.conns || {}) };
       rt.peers = rt.peers && typeof rt.peers === 'object' ? rt.peers : {};
+      rt.player = { ...rtPadrao().player, ...(rt.player || {}) };
     })().finally(() => { carregando = null; });
     return carregando;
   }
@@ -90,7 +92,7 @@ export function criarNucleo(deps) {
     signaling: rt.conns.signaling,
   });
   const painel = () => aoContent({ t: INT.PANEL, ...dadosPainel() });
-  const msgEstado = () => ({ t: E2C.STATE, ...publico(estado) });
+  const msgEstado = () => ({ t: E2C.STATE, ...publico(estado), player: { ...rt.player } });
   async function difundirEstado() {
     await Promise.all([aTodos(msgEstado()), painel()]);
   }
@@ -105,7 +107,8 @@ export function criarNucleo(deps) {
   }
   async function proximaMusica() {
     estado = avancar(estado).estado;
-    await salvarEstado();
+    rt.player = { ...rt.player, pausado: false }; // música nova começa tocando (o mudo/volume ficam)
+    await Promise.all([salvarEstado(), salvarRt()]);
     await acionarPlayer();
   }
   const doKtv = (sender) => sender?.tab?.id != null && sender.tab.id === rt.ktvTabId;
@@ -311,6 +314,14 @@ export function criarNucleo(deps) {
         });
       }
 
+      case C2E.CONTROL: {
+        if (!ACOES_CONTROLE.includes(msg.acao)) return erroPara(ERR.MSG_INVALIDA);
+        return travar(async () => {
+          if (!estado.atual || !rt.started) return undefined; // nada tocando: ignora
+          return aoContent({ t: INT.CONTROL, acao: msg.acao });
+        });
+      }
+
       case C2E.MOVE: {
         if (typeof msg.itemId !== 'string' || !Number.isInteger(msg.toIndex)) return erroPara(ERR.MSG_INVALIDA);
         return travar(async () => {
@@ -379,6 +390,22 @@ export function criarNucleo(deps) {
           await salvarEstado();
           if (puxou || !jaLiberado) await acionarPlayer();
           return difundirEstado();
+        });
+
+      case INT.PLAYER_STATUS:
+        return travar(async () => {
+          if (!doKtv(sender)) return undefined;
+          const volume = Number(msg.volume);
+          const novo = {
+            pausado: Boolean(msg.pausado),
+            mudo: Boolean(msg.mudo),
+            volume: Number.isFinite(volume) ? Math.max(0, Math.min(100, Math.round(volume))) : rt.player.volume,
+          };
+          const p = rt.player;
+          if (p.pausado === novo.pausado && p.mudo === novo.mudo && p.volume === novo.volume) return undefined;
+          rt.player = novo;
+          await salvarRt();
+          return aTodos(msgEstado());
         });
 
       case INT.ENDED:

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   parseHash, resolverSinalizacao, backoffDelay, podeRemover, podePular, textoErro,
   resultadoVale, normalizarState, idsNoEstado, normalizarResultados, erroSoDeSinalizacao, linkDaAreaDeTransferencia,
+  acaoPlayPausa, acaoMudo,
 } from '../../web/logic.js';
 import { CONFIG, ERR, ERR_TEXT } from '../../web/protocol.js';
 
@@ -77,7 +78,19 @@ test('normalizarState e idsNoEstado', () => {
   assert.equal(st.fila.length, 1);
   assert.equal(st.atual.itemId, '1');
   assert.deepEqual([...idsNoEstado(st)].sort(), ['AAAAAAAAAAA', 'BBBBBBBBBBB']);
-  assert.deepEqual(normalizarState(null), { atual: null, fila: [], tocando: false });
+  assert.deepEqual(normalizarState(null), {
+    atual: null, fila: [], tocando: false, player: { pausado: false, mudo: false, volume: 100 },
+  });
+});
+
+test('normalizarState: player saneado; acaoPlayPausa/acaoMudo alternam conforme o estado', () => {
+  const st = normalizarState({ player: { pausado: 1, mudo: true, volume: 250 } });
+  assert.deepEqual(st.player, { pausado: true, mudo: true, volume: 100 });
+  assert.equal(normalizarState({ player: { volume: 'x' } }).player.volume, 100);
+  assert.equal(acaoPlayPausa({ pausado: true }), 'play');
+  assert.equal(acaoPlayPausa({ pausado: false }), 'pause');
+  assert.equal(acaoMudo({ mudo: true }), 'unmute');
+  assert.equal(acaoMudo(undefined), 'mute');
 });
 
 test('normalizarResultados descarta itens sem videoId', () => {

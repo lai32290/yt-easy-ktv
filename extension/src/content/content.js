@@ -68,6 +68,7 @@
     const { INT, TARGET } = proto;
     const {
       panelModel, videoIdFromHref, watchPath, novaSessao, avaliar, deveSilenciar,
+      statusPlayer, aplicarControle,
     } = modelo;
     const qrcode = qrMod && qrMod.default;
 
@@ -80,6 +81,7 @@
     let sessao = null; // reprodução atual (ver novaSessao)
     let jogoPendente = null; // play recebido antes do clique em "Iniciar"
     let videoAnexado = null;
+    let ultimoStatus = ''; // último playerStatus enviado (só reenvia se mudar)
     let autonavTentativas = 0;
     let ultimoQrUrl = null;
     let ultimoQrSvg = null;
@@ -389,7 +391,7 @@
       videoAnexado = v;
       if (v) for (const ev of EVENTOS_VIDEO) v.addEventListener(ev, aoEventoVideo);
     }
-    const EVENTOS_VIDEO = ['playing', 'ended', 'error', 'loadeddata', 'pause'];
+    const EVENTOS_VIDEO = ['playing', 'ended', 'error', 'loadeddata', 'pause', 'volumechange'];
     function aoEventoVideo() { tick(); }
 
     async function tentarTocar(v) {
@@ -404,6 +406,26 @@
           log('play() falhou:', e && e.name); // ex.: AbortError durante troca de vídeo; tenta de novo
         }
       }
+    }
+
+    // Avisa o SW (e, por ele, os celulares) quando pausa/mudo/volume mudam.
+    // Só durante a reprodução da música: no fim/erro o <video> pausa e isso não é ação do usuário.
+    function informarStatus() {
+      const v = achaVideo();
+      if (!v || !sessao || sessao.endedEnviado || sessao.erroEnviado) return;
+      if (urlVideoId() !== sessao.videoId || anuncioTocando()) return;
+      const st = statusPlayer(v);
+      const chave = JSON.stringify(st);
+      if (chave === ultimoStatus) return;
+      ultimoStatus = chave;
+      enviar({ t: INT.PLAYER_STATUS, ...st });
+    }
+
+    async function controlar(acao) {
+      const v = achaVideo();
+      if (!sessao || !v || !emWatch() || anuncioTocando()) return;
+      if (aplicarControle(v, acao) === 'tocar') await tentarTocar(v);
+      tick();
     }
 
     function tick() {
@@ -428,6 +450,7 @@
         }
 
         if (!sessao) return;
+        informarStatus();
         if (sessao.viuPlaying && obs.pausado && !sessao.endedEnviado) confirmarContinuarAssistindo();
         for (const acao of avaliar(sessao, obs, Date.now())) {
           if (acao === 'pausar') {
@@ -513,6 +536,9 @@
           // play repetido para o que já está tocando: ignora
           if (sessao && sessao.videoId === msg.videoId && !sessao.endedEnviado && !sessao.erroEnviado) return;
           iniciarSessao(msg.videoId);
+          break;
+        case INT.CONTROL:
+          controlar(msg.acao);
           break;
         case INT.IDLE:
           parar();
