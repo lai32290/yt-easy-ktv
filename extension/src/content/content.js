@@ -325,6 +325,17 @@
       } catch { /* ignora */ }
     }
 
+    // [VALIDAR] diálogo "Vídeo pausado. Continuar assistindo?" do YouTube em sessões longas:
+    // pausa a música no meio (depois de `playing`, então o timeout não cobre). Confirma sozinho.
+    function confirmarContinuarAssistindo() {
+      try {
+        const d = document.querySelector('ytd-popup-container yt-confirm-dialog-renderer');
+        if (!d || d.getClientRects().length === 0) return;
+        const b = d.querySelector('#confirm-button button, #confirm-button');
+        if (b) { b.click(); log('"Continuar assistindo?" confirmado'); }
+      } catch { /* ignora */ }
+    }
+
     function observar() {
       const v = achaVideo();
       return {
@@ -386,6 +397,7 @@
         }
 
         if (!sessao) return;
+        if (sessao.viuPlaying && obs.pausado && !sessao.endedEnviado) confirmarContinuarAssistindo();
         for (const acao of avaliar(sessao, obs, Date.now())) {
           if (acao === 'pausar') {
             const v = achaVideo();

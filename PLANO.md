@@ -90,7 +90,7 @@ Legenda: `[ ]` pendente · `[~]` implementado, falta validar com YouTube/celular
 - [x] **T5.5 Mensagens de erro padronizadas.** _(e2e: toasts em pt-BR para duplicado, link inválido, busca e vídeo indisponível)_ Tabela de códigos em `protocol.js` → textos em pt-BR no celular. Dep: T0.4.
 - [x] **T5.6 Recuperação após suspensão do SW.** _(e2e via CDP `ServiceWorker.stopAllWorkers`)_ Teste: matar o SW em `chrome://serviceworker-internals` e conferir que fila, música atual e sala voltam. Dep: T2.9, T5.1.
 - [x] **T5.7 Host de sinalização configurável.** _(e2e: override `ktv_signaling` + `sig=` no hash apontam para o servidor local)_ `host/port/path/secure` do PeerJS em constante única, para trocar de `0.peerjs.com` por um servidor próprio. Dep: T1.3.
-- [~] **T5.8 `move` (reordenar) — opcional.** Só se sobrar tempo; incluir na UI do celular. Dep: T5.3.
+- [~] **T5.8 `move` (reordenar) — opcional.** _(o SW já trata `move` (testes unitários); a UI do celular ainda não tem o controle)_ Só se sobrar tempo; incluir na UI do celular. Dep: T5.3.
 
 **Marco de aceite M5:** todos os itens da seção 12 do handoff marcados (ver checklist abaixo).
 
