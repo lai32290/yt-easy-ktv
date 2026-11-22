@@ -175,3 +175,13 @@ export function deveSilenciar(s, obs) {
   if (!s || s.endedEnviado || s.erroEnviado) return true;
   return obs.urlVideoId !== s.videoId;
 }
+
+/**
+ * Fullscreen entre músicas: se o usuário estava em tela cheia, a próxima música deve voltar
+ * a ela. Só tenta com a música tocando na /watch e uma vez por reprodução (s.fsTentado).
+ * obs: { emWatch, tocando, emFullscreen }
+ */
+export function deveReentrarFullscreen(s, querFullscreen, obs) {
+  if (!s || !querFullscreen || s.fsTentado) return false;
+  return Boolean(obs.emWatch && obs.tocando && !obs.emFullscreen);
+}

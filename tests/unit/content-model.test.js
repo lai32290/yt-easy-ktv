@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
   panelModel, textoConns, videoIdFromHref, watchPath, novaSessao, avaliar, deveSilenciar,
-  TEXTOS, MAX_PROXIMOS, PLAY_TIMEOUT_MS,
+  deveReentrarFullscreen, TEXTOS, MAX_PROXIMOS, PLAY_TIMEOUT_MS,
 } from '../../extension/src/content/panel-model.js';
 import { CONFIG } from '../../extension/src/shared/protocol.js';
 
@@ -213,4 +213,16 @@ test('content.js tem sintaxe válida (node --check)', () => {
   const arq = fileURLToPath(new URL('../../extension/src/content/content.js', import.meta.url));
   const r = spawnSync(process.execPath, ['--check', arq], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
+});
+
+test('deveReentrarFullscreen: volta à tela cheia na próxima música, uma vez', () => {
+  const s = novaSessao('v2', 0);
+  const obs = { emWatch: true, tocando: true, emFullscreen: false };
+  assert.equal(deveReentrarFullscreen(s, false, obs), false); // não estava em tela cheia
+  assert.equal(deveReentrarFullscreen(s, true, { ...obs, tocando: false }), false);
+  assert.equal(deveReentrarFullscreen(s, true, { ...obs, emFullscreen: true }), false);
+  assert.equal(deveReentrarFullscreen(null, true, obs), false);
+  assert.equal(deveReentrarFullscreen(s, true, obs), true);
+  s.fsTentado = true;
+  assert.equal(deveReentrarFullscreen(s, true, obs), false);
 });
