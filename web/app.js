@@ -3,7 +3,7 @@
 import { CONFIG, C2E, E2C, ERR_TEXT, thumbUrl } from './protocol.js';
 import {
   parseHash, resolverSinalizacao, backoffDelay, podeRemover, podePular, textoErro,
-  resultadoVale, normalizarState, idsNoEstado, normalizarResultados, erroSoDeSinalizacao,
+  resultadoVale, normalizarState, idsNoEstado, normalizarResultados, erroSoDeSinalizacao, linkDaAreaDeTransferencia,
 } from './logic.js';
 
 const $ = (id) => document.getElementById(id);
@@ -445,6 +445,25 @@ function iniciar() {
     if (!url) return;
     if (enviar({ t: C2E.ADD, url })) {
       $('link-input').value = '';
+      marcarAguardando();
+      toastOk('Enviando…');
+    }
+  });
+
+  $('link-clipboard').addEventListener('click', async () => {
+    let texto = '';
+    try {
+      texto = await navigator.clipboard.readText();
+    } catch {
+      toastErro('Não consegui ler a área de transferência. Cole o link no campo acima.');
+      return;
+    }
+    const url = linkDaAreaDeTransferencia(texto);
+    if (!url) {
+      toastErro('A área de transferência está vazia. Copie o link de um vídeo do YouTube.');
+      return;
+    }
+    if (enviar({ t: C2E.ADD, url })) {
       marcarAguardando();
       toastOk('Enviando…');
     }

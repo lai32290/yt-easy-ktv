@@ -107,3 +107,10 @@ export function normalizarResultados(itens, max = 30) {
     ? { videoId: str(r.videoId, 32), titulo: str(r.titulo), canal: str(r.canal), duracao: str(r.duracao, 20) }
     : null)).filter((r) => r && r.videoId);
 }
+
+/** Extrai o link do texto da área de transferência (primeiro http(s) ou, senão, a primeira palavra); '' se vazio. */
+export function linkDaAreaDeTransferencia(texto) {
+  if (typeof texto !== 'string') return '';
+  const m = texto.match(/https?:\/\/\S+/i);
+  return m ? m[0] : (texto.trim().split(/\s+/)[0] || '');
+}
