@@ -67,7 +67,7 @@
     if (morto) return;
     const { INT, TARGET } = proto;
     const {
-      panelModel, videoIdFromHref, watchPath, novaSessao, avaliar, deveSilenciar,
+      panelModel, videoIdFromHref, watchPath, novaSessao, avaliar, deveSilenciar, deveReentrarFullscreen,
       statusPlayer, aplicarControle,
     } = modelo;
     const qrcode = qrMod && qrMod.default;
@@ -78,6 +78,7 @@
     };
     let iniciou = lerSessao('ktv.iniciou') === '1';
     let recolhido = lerSessao('ktv.recolhido') === '1';
+    let querFullscreen = lerSessao('ktv.fullscreen') === '1'; // estava em tela cheia (sobrevive à recarga)
     let sessao = null; // reprodução atual (ver novaSessao)
     let jogoPendente = null; // play recebido antes do clique em "Iniciar"
     let videoAnexado = null;
@@ -428,6 +429,38 @@
       tick();
     }
 
+    // Fullscreen: lembra se o usuário estava em tela cheia; o YouTube sai dela ao trocar de vídeo.
+    // Sair no meio da música (sem fim/navegação) é escolha do usuário e desliga a lembrança.
+    function aoMudarFullscreen() {
+      if (document.fullscreenElement) querFullscreen = true;
+      else if (sessao && !sessao.endedEnviado && !sessao.navIniciada) querFullscreen = false;
+      else return;
+      gravarSessao('ktv.fullscreen', querFullscreen ? '1' : '0');
+    }
+    // requestFullscreen exige gesto do usuário: tenta direto e, se recusar, no próximo clique/tecla.
+    function reentrarFullscreen() {
+      const p = achaPlayer();
+      if (!p || !p.requestFullscreen) return;
+      const falhou = (e) => { log('fullscreen recusado', e && e.name); esperarGestoFullscreen(); };
+      try { Promise.resolve(p.requestFullscreen()).catch(falhou); } catch (e) { falhou(e); }
+    }
+    let esperandoGesto = false;
+    function esperarGestoFullscreen() {
+      if (esperandoGesto) return;
+      esperandoGesto = true;
+      const h = () => {
+        document.removeEventListener('pointerdown', h, true);
+        document.removeEventListener('keydown', h, true);
+        esperandoGesto = false;
+        if (querFullscreen && !document.fullscreenElement) {
+          const p = achaPlayer();
+          if (p && p.requestFullscreen) p.requestFullscreen().catch(() => {});
+        }
+      };
+      document.addEventListener('pointerdown', h, true);
+      document.addEventListener('keydown', h, true);
+    }
+
     function tick() {
       if (morto) return;
       try {
@@ -451,6 +484,10 @@
 
         if (!sessao) return;
         informarStatus();
+        if (deveReentrarFullscreen(sessao, querFullscreen, { ...obs, emFullscreen: !!document.fullscreenElement })) {
+          sessao.fsTentado = true;
+          reentrarFullscreen();
+        }
         if (sessao.viuPlaying && obs.pausado && !sessao.endedEnviado) confirmarContinuarAssistindo();
         for (const acao of avaliar(sessao, obs, Date.now())) {
           if (acao === 'pausar') {
@@ -583,11 +620,13 @@
     document.addEventListener('yt-navigate-start', aoNavegarInicio);
     document.addEventListener('yt-navigate-finish', aoNavegarFim);
     document.addEventListener('play', aoPlayCapturado, true);
+    document.addEventListener('fullscreenchange', aoMudarFullscreen);
     const intervalo = setInterval(tick, 1000);
     limpezas.push(() => {
       document.removeEventListener('yt-navigate-start', aoNavegarInicio);
       document.removeEventListener('yt-navigate-finish', aoNavegarFim);
       document.removeEventListener('play', aoPlayCapturado, true);
+      document.removeEventListener('fullscreenchange', aoMudarFullscreen);
       clearInterval(intervalo);
       anexarVideo(null);
       raiz.remove();
