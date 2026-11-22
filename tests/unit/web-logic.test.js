@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseHash, resolverSinalizacao, backoffDelay, podeRemover, podePular, textoErro,
-  resultadoVale, normalizarState, idsNoEstado, normalizarResultados, erroSoDeSinalizacao,
+  resultadoVale, normalizarState, idsNoEstado, normalizarResultados, erroSoDeSinalizacao, linkDaAreaDeTransferencia,
 } from '../../web/logic.js';
 import { CONFIG, ERR, ERR_TEXT } from '../../web/protocol.js';
 
@@ -89,4 +89,12 @@ test('normalizarResultados descarta itens sem videoId', () => {
 test('erroSoDeSinalizacao reconhece só erros do servidor de sinalização', () => {
   for (const t of ['network', 'socket-error', 'socket-closed', 'server-error']) assert.equal(erroSoDeSinalizacao(t), true);
   for (const t of ['peer-unavailable', 'webrtc', 'browser-incompatible', undefined]) assert.equal(erroSoDeSinalizacao(t), false);
+});
+
+test('linkDaAreaDeTransferencia pega o primeiro link do texto copiado', () => {
+  assert.equal(linkDaAreaDeTransferencia('  https://youtu.be/abc \n'), 'https://youtu.be/abc');
+  assert.equal(linkDaAreaDeTransferencia('veja https://youtu.be/abc ok'), 'https://youtu.be/abc');
+  assert.equal(linkDaAreaDeTransferencia('youtu.be/abc'), 'youtu.be/abc');
+  assert.equal(linkDaAreaDeTransferencia('   '), '');
+  assert.equal(linkDaAreaDeTransferencia(null), '');
 });
