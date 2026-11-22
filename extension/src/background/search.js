@@ -72,6 +72,30 @@ function mapear(v) {
   };
 }
 
+// O YouTube alterna (A/B por requisição) entre `videoRenderer` e `lockupViewModel` para o mesmo vídeo.
+const RE_DURACAO = /^\d{1,2}(:\d{2}){1,2}$/;
+
+function mapearLockup(l) {
+  if (l.contentType !== 'LOCKUP_CONTENT_TYPE_VIDEO') return null; // playlists, mixes, canais...
+  const videoId = l.contentId;
+  if (typeof videoId !== 'string' || !CONFIG.VIDEO_ID_RE.test(videoId)) return null;
+  const meta = l.metadata?.lockupMetadataViewModel;
+  const titulo = meta?.title?.content;
+  if (!titulo) return null;
+  const parte = meta.metadata?.contentMetadataViewModel?.metadataRows?.[0]?.metadataParts?.[0];
+  const canal = parte?.avatarStack?.avatarStackViewModel?.text?.content || parte?.text?.content || '';
+  const sobreposicoes = JSON.stringify(l.contentImage?.thumbnailViewModel?.overlays || []);
+  if (/"badgeStyle":"[A-Z_]*LIVE|"imageName":"LIVE/.test(sobreposicoes)) return null;
+  let duracao = '';
+  for (const o of l.contentImage?.thumbnailViewModel?.overlays || []) {
+    for (const b of o.thumbnailBottomOverlayViewModel?.badges || []) {
+      const t = b.thumbnailBadgeViewModel?.text;
+      if (typeof t === 'string' && RE_DURACAO.test(t)) duracao = t;
+    }
+  }
+  return { videoId, titulo, canal, duracao };
+}
+
 // Função pura: HTML da página de resultados -> lista de { videoId, titulo, canal, duracao }.
 // Lança `busca_falhou` se o HTML não tiver ytInitialData (formato mudou / página de consentimento).
 export function parseResultsHtml(html, max = CONFIG.MAX_RESULTS) {
@@ -79,6 +103,12 @@ export function parseResultsHtml(html, max = CONFIG.MAX_RESULTS) {
   if (!dados) throw erro('ytInitialData não encontrado', 'busca_falhou');
   const itens = [];
   const vistos = new Set();
+  const adicionar = (item) => {
+    if (item && !vistos.has(item.videoId)) {
+      vistos.add(item.videoId);
+      itens.push(item);
+    }
+  };
   const percorrer = (no) => {
     if (itens.length >= max || !no || typeof no !== 'object') return;
     if (Array.isArray(no)) {
@@ -87,16 +117,10 @@ export function parseResultsHtml(html, max = CONFIG.MAX_RESULTS) {
     }
     for (const [chave, valor] of Object.entries(no)) {
       if (itens.length >= max) return;
-      if (IGNORAR.test(chave)) continue;
-      if (chave === 'videoRenderer' && valor && typeof valor === 'object') {
-        const item = mapear(valor);
-        if (item && !vistos.has(item.videoId)) {
-          vistos.add(item.videoId);
-          itens.push(item);
-        }
-      } else {
-        percorrer(valor);
-      }
+      if (IGNORAR.test(chave) || !valor || typeof valor !== 'object') continue;
+      if (chave === 'videoRenderer') adicionar(mapear(valor));
+      else if (chave === 'lockupViewModel') adicionar(mapearLockup(valor));
+      else percorrer(valor);
     }
   };
   percorrer(dados.contents ?? dados);

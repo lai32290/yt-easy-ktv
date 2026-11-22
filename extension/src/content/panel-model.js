@@ -146,16 +146,10 @@ export function avaliar(s, obs, agora) {
     return ['pausar', 'enviarErro'];
   }
 
+  // Pausado (ou reaproveitado já terminado) e ainda sem `playing`: tenta tocar.
+  // play() num vídeo terminado reinicia do começo.
   if (
-    naPagina && obs.temVideo && obs.pausado && !obs.terminou && !s.viuPlaying &&
-    !s.bloqueado && agora - s.ultimaTentativa >= TENTATIVA_PLAY_MS
-  ) {
-    s.ultimaTentativa = agora;
-    return ['tocar'];
-  }
-  // vídeo reaproveitado já terminado e ainda sem `playing`: tocar de novo reinicia
-  if (
-    naPagina && obs.temVideo && obs.terminou && !s.viuPlaying &&
+    naPagina && obs.temVideo && (obs.pausado || obs.terminou) && !s.viuPlaying &&
     !s.bloqueado && agora - s.ultimaTentativa >= TENTATIVA_PLAY_MS
   ) {
     s.ultimaTentativa = agora;
