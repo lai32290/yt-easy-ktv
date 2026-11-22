@@ -521,3 +521,19 @@ test('fechar a janela KTV com música tocando: celulares veem "pausado"; ao reab
   assert.equal(h.ultimoState().tocando, true);
   assert.equal(h.comandosTab('play').at(-1).videoId, V1);
 });
+
+test('skip com itemId: dois pulos da mesma música (toque duplo / dois celulares) pulam só uma', async () => {
+  const h = montar();
+  await prepararKtv(h);
+  for (const v of [V1, V2, V3]) await h.peer('c1', { t: 'add', videoId: v });
+  await h.int('started', {}, sender());
+  const atualId = h.ultimoState().atual.itemId;
+  await Promise.all([
+    h.peer('c1', { t: 'skip', itemId: atualId }),
+    h.peer('c2', { t: 'skip', itemId: atualId }),
+  ]);
+  assert.equal(h.ultimoState().atual.videoId, V2);
+  assert.deepEqual(h.comandosTab('play').map((m) => m.videoId), [V1, V2]);
+  await h.peer('c2', { t: 'skip', itemId: 123 });
+  assert.equal(h.paraConn('c2').at(-1).codigo, 'msg_invalida');
+});

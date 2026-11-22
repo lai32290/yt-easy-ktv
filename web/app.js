@@ -270,7 +270,8 @@ function renderFila() {
       skip.type = 'button';
       skip.setAttribute('data-testid', 'skip-btn');
       skip.addEventListener('click', () => {
-        enviar({ t: C2E.SKIP });
+        // Leva o itemId: o KTV ignora o pulo se essa música já saiu (toque duplo, outro celular).
+        if (enviar({ t: C2E.SKIP, itemId: a.itemId })) skip.disabled = true;
       });
       body.append(skip);
     }

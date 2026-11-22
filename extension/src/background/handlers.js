@@ -304,8 +304,11 @@ export function criarNucleo(deps) {
 
       case C2E.SKIP: {
         if (CONFIG.SKIP_POLICY !== 'todos') return erroPara(ERR.SEM_PERMISSAO);
+        if (msg.itemId != null && typeof msg.itemId !== 'string') return erroPara(ERR.MSG_INVALIDA);
         return travar(async () => {
           if (!estado.atual) return undefined;
+          // Dois toques em "Pular" (ou dois celulares ao mesmo tempo) não pulam duas músicas.
+          if (msg.itemId && msg.itemId !== estado.atual.itemId) return undefined;
           await proximaMusica();
           return difundirEstado();
         });

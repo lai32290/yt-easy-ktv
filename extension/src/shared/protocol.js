@@ -21,7 +21,7 @@ export const C2E = {
   SEARCH: 'search', // { id, q, karaoke? }  karaoke=false desliga o sufixo
   ADD: 'add',       // { videoId } | { url }
   REMOVE: 'remove', // { itemId }
-  SKIP: 'skip',     // {}
+  SKIP: 'skip',     // { itemId? }  itemId = música que o celular quer pular (pulo repetido/atrasado é ignorado)
   MOVE: 'move',     // { itemId, toIndex }  (opcional)
 };
 
