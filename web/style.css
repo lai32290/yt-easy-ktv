@@ -105,6 +105,12 @@ input:focus-visible, .btn:focus-visible, .tab:focus-visible, .link-btn:focus-vis
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
 }
 .item, .now { display: flex; align-items: center; gap: 12px; padding: 10px; }
+.drag-handle {
+  flex: none; font-size: 2rem; line-height: 1; color: var(--text, #e8e8ee); cursor: grab; padding: 10px 6px; margin: -4px -4px -4px -6px;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.item.shifting { transition: transform 150ms ease; }
+.item.dragging { position: relative; z-index: 5; transition: none; transform-origin: center; border-color: var(--accent); box-shadow: 0 4px 14px rgba(0,0,0,.35); }
 .now.playing { border-color: var(--accent); }
 .thumb {
   width: 96px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; background: var(--surface-2); flex: none;

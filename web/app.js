@@ -277,7 +277,75 @@ function ligarLimpar() {
     enviar({ t: C2E.CLEAR });
   });
 }
+// Arrastar para reordenar: a alça (⠿) usa pointer events (toque e mouse). Durante o arrasto o DOM
+// não é reordenado: medimos as posições uma vez no início e só movemos itens com transform
+// (o arrastado segue o ponteiro; os vizinhos deslizam para abrir espaço). Ao soltar, manda MOVE.
+let arrasto = null; // { pendente }
+function iniciarArrasto(ev, li, it) {
+  if (arrasto || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
+  ev.preventDefault();
+  const lista = li.parentElement;
+  const alca = ev.currentTarget;
+  const itens = [...lista.children];
+  const de = itens.indexOf(li);
+  const topos = itens.map((c) => c.getBoundingClientRect().top);
+  const alturas = itens.map((c) => c.getBoundingClientRect().height);
+  const gap = itens.length > 1 ? topos[1] - (topos[0] + alturas[0]) : 0;
+  const pegada = ev.clientY - topos[de];
+  const outros = itens.filter((c) => c !== li);
+  const meios = outros.map((c) => topos[itens.indexOf(c)] + alturas[itens.indexOf(c)] / 2);
+  const minTopo = topos[0];
+  const maxTopo = topos[itens.length - 1] + alturas[itens.length - 1] - alturas[de];
+  arrasto = { pendente: false };
+  let para = de;
+  li.classList.add('dragging');
+  for (const c of outros) c.classList.add('shifting');
+  try { alca.setPointerCapture(ev.pointerId); } catch { /* ok */ }
+
+  const mover = (e) => {
+    const topo = Math.max(minTopo, Math.min(maxTopo, e.clientY - pegada));
+    li.style.transform = `translateY(${topo - topos[de]}px)`;
+    const centro = topo + alturas[de] / 2;
+    para = meios.filter((m) => m < centro).length;
+    // Layout resultante: os outros na ordem original, com o arrastado inserido na posição `para`.
+    let y = minTopo;
+    const ordem = [...outros];
+    ordem.splice(para, 0, null);
+    for (const c of ordem) {
+      if (c === null) { y += alturas[de] + gap; continue; }
+      const i = itens.indexOf(c);
+      c.style.transform = `translateY(${y - topos[i]}px)`;
+      y += alturas[i] + gap;
+    }
+  };
+  const fim = (e) => {
+    alca.removeEventListener('pointermove', mover);
+    alca.removeEventListener('pointerup', fim);
+    alca.removeEventListener('pointercancel', fim);
+    const pendente = arrasto.pendente;
+    arrasto = null;
+    // Reordena o DOM no lugar final e limpa os transforms de uma vez (sem animar).
+    for (const c of itens) { c.style.transition = 'none'; }
+    if (e.type === 'pointerup' && para !== de) {
+      const ref = outros[para] || null;
+      lista.insertBefore(li, ref);
+    }
+    for (const c of itens) { c.style.transform = ''; c.classList.remove('dragging', 'shifting'); }
+    lista.getBoundingClientRect();
+    for (const c of itens) c.style.transition = '';
+    if (e.type === 'pointerup' && para !== de) {
+      if (!enviar({ t: C2E.MOVE, itemId: it.itemId, toIndex: para })) renderFila();
+    } else if (pendente || e.type === 'pointercancel') {
+      renderFila();
+    }
+  };
+  alca.addEventListener('pointermove', mover);
+  alca.addEventListener('pointerup', fim);
+  alca.addEventListener('pointercancel', fim);
+}
+
 function renderFila() {
+  if (arrasto) { arrasto.pendente = true; return; } // não mexe na lista no meio do arrasto
   const st = lastState;
   const now = $('now-playing');
   now.replaceChildren();
@@ -320,6 +388,13 @@ function renderFila() {
     const li = el('li', 'item');
     li.setAttribute('data-testid', 'queue-item');
     li.dataset.itemId = it.itemId;
+    if (fila.length > 1) {
+      const alca = el('span', 'drag-handle', '⠿');
+      alca.setAttribute('data-testid', 'drag-handle');
+      alca.setAttribute('aria-label', 'Arrastar para reordenar');
+      alca.addEventListener('pointerdown', (ev) => iniciarArrasto(ev, li, it));
+      li.append(alca);
+    }
     li.append(thumb(it.videoId));
     const info = el('div', 'info');
     const titulo = el('span', 'title', it.titulo || 'Sem título');
