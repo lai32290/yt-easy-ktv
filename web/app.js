@@ -518,13 +518,15 @@ function renderResultados() {
     b.setAttribute('data-testid', 'add-btn');
     b.disabled = enviado;
     if (!b.disabled) b.addEventListener('click', () => adicionar(r.videoId, b));
-    li.append(b);
+    const acoes = el('div', 'actions');
+    acoes.append(b);
     const bp = el('button', 'btn btn-small', 'Tocar a seguir');
     bp.type = 'button';
     bp.setAttribute('data-testid', 'play-next-btn');
     bp.disabled = enviado;
     if (!bp.disabled) bp.addEventListener('click', () => adicionar(r.videoId, bp, true));
-    li.append(bp);
+    acoes.append(bp);
+    li.append(acoes);
     lista.append(li);
   }
 }
