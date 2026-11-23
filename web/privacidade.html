@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Privacidade - KTV YouTube</title>
+  <style>
+    :root { --bg: #0f1115; --text: #f1f3f8; --muted: #98a0b3; --accent: #ff4d8d; --border: #2e3340; }
+    @media (prefers-color-scheme: light) { :root { --bg: #fff; --text: #1a1d24; --muted: #5a6275; --border: #d9dce5; } }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { max-width: 720px; margin: 0 auto; padding: 24px 16px 64px; }
+    h1 { font-size: 1.6rem; margin: 32px 0 4px; }
+    h2 { font-size: 1.05rem; margin: 24px 0 6px; }
+    p, li { margin: 6px 0; }
+    .upd { color: var(--muted); font-size: 0.9rem; }
+    section { padding-bottom: 28px; border-bottom: 1px solid var(--border); }
+    section:last-of-type { border-bottom: 0; }
+    a { color: var(--accent); }
+    nav a { margin-right: 14px; }
+  </style>
+</head>
+<body>
+<main>
+  <nav><a href="#pt">Português</a><a href="#en">English</a><a href="#zh">繁體中文</a></nav>
+
+  <section id="pt" lang="pt-BR">
+    <h1>Política de Privacidade – KTV YouTube</h1>
+    <p class="upd">Última atualização: 23/11/2026</p>
+    <p>A extensão KTV YouTube não coleta, não vende e não envia dados pessoais para o desenvolvedor.</p>
+    <h2>O que fica no seu dispositivo</h2>
+    <ul>
+      <li>A fila de músicas, o ID da sala e o estado da reprodução, salvos localmente no navegador (chrome.storage.local). Você apaga tudo desinstalando a extensão.</li>
+      <li>Nos celulares, o apelido digitado fica no localStorage do navegador do celular.</li>
+    </ul>
+    <h2>Conexões de rede</h2>
+    <ul>
+      <li>Celular e PC se conectam diretamente (WebRTC). Os apelidos e pedidos de música não passam por servidor do desenvolvedor.</li>
+      <li>Para estabelecer a conexão, é usado um servidor público de sinalização (PeerJS), que recebe o ID temporário da sala e dados técnicos da conexão, como o endereço IP. Servidores STUN públicos também podem ser usados.</li>
+      <li>A extensão acessa páginas do youtube.com para buscar músicas e reproduzir vídeos. Esse uso está sujeito à política de privacidade do YouTube/Google.</li>
+    </ul>
+    <p>Não usamos analytics, anúncios nem rastreadores.</p>
+    <p>Contato: abra uma issue em <a href="https://github.com/lai32290/yt-easy-ktv/issues">github.com/lai32290/yt-easy-ktv/issues</a>.</p>
+  </section>
+
+  <section id="en" lang="en">
+    <h1>Privacy Policy – KTV YouTube</h1>
+    <p class="upd">Last updated: 2026-11-23</p>
+    <p>The KTV YouTube extension does not collect, sell or send personal data to the developer.</p>
+    <h2>What stays on your device</h2>
+    <ul>
+      <li>The song queue, room ID and playback state, stored locally in the browser (chrome.storage.local). Uninstalling the extension removes it.</li>
+      <li>On phones, the nickname you type is kept in the phone browser's localStorage.</li>
+    </ul>
+    <h2>Network connections</h2>
+    <ul>
+      <li>Phones and the PC connect directly (WebRTC). Nicknames and song requests do not pass through any server of the developer.</li>
+      <li>To set up the connection, a public signaling server (PeerJS) is used. It receives the temporary room ID and technical connection data such as the IP address. Public STUN servers may also be used.</li>
+      <li>The extension accesses youtube.com pages to search for songs and play videos. That use is subject to YouTube/Google's privacy policy.</li>
+    </ul>
+    <p>We use no analytics, ads or trackers.</p>
+    <p>Contact: open an issue at <a href="https://github.com/lai32290/yt-easy-ktv/issues">github.com/lai32290/yt-easy-ktv/issues</a>.</p>
+  </section>
+
+  <section id="zh" lang="zh-TW">
+    <h1>隱私權政策 – KTV YouTube</h1>
+    <p class="upd">最後更新：2026-11-23</p>
+    <p>KTV YouTube 擴充功能不會收集、出售個人資料，也不會把個人資料傳送給開發者。</p>
+    <h2>儲存在你裝置上的內容</h2>
+    <ul>
+      <li>點歌佇列、房間 ID 與播放狀態，僅儲存在瀏覽器本機（chrome.storage.local）。解除安裝擴充功能即可清除。</li>
+      <li>在手機上，你輸入的暱稱儲存在手機瀏覽器的 localStorage 中。</li>
+    </ul>
+    <h2>網路連線</h2>
+    <ul>
+      <li>手機與電腦透過 WebRTC 直接連線。暱稱與點歌請求不會經過開發者的任何伺服器。</li>
+      <li>為了建立連線，會使用公用的信令伺服器（PeerJS），它會接收臨時房間 ID 以及 IP 位址等連線技術資訊。也可能使用公用的 STUN 伺服器。</li>
+      <li>擴充功能會存取 youtube.com 頁面以搜尋歌曲並播放影片，該使用受 YouTube/Google 隱私權政策約束。</li>
+    </ul>
+    <p>我們不使用流量分析、廣告或追蹤器。</p>
+    <p>聯絡方式：請在 <a href="https://github.com/lai32290/yt-easy-ktv/issues">github.com/lai32290/yt-easy-ktv/issues</a> 開 issue。</p>
+  </section>
+</main>
+</body>
+</html>
