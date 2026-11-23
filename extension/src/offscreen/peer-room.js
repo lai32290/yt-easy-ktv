@@ -238,11 +238,14 @@ export function createPeerRoom({
 
   // ---- API ----
   function initPeer(msg = {}) {
-    const wanted = typeof msg.roomId === 'string' && msg.roomId ? msg.roomId : undefined;
+    const nova = msg.nova === true;
+    const wanted = nova
+      ? uuid() // sala nova: ID imprevisível, nunca reaproveita o anterior
+      : (typeof msg.roomId === 'string' && msg.roomId ? msg.roomId : undefined);
     const sig = pickSignaling(msg.signaling);
     const sameSig = !msg.signaling || JSON.stringify(sig) === JSON.stringify(signaling);
     const sameRoom = !wanted || wanted === roomId || wanted === desiredId;
-    if (started && sameSig && sameRoom) {
+    if (started && !nova && sameSig && sameRoom) {
       // Idempotente: não recria; apenas reenvia o estado conhecido.
       if (roomId && peer && peer.open) { emit({ t: INT.ROOM, roomId }); }
       reportConns();

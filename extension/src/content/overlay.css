@@ -92,6 +92,19 @@
   font-size: 14px;
   line-height: 1;
 }
+.btn-nova-sala {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  color: inherit;
+  border-radius: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-left: auto;
+}
+.btn-nova-sala:hover { background: rgba(255, 255, 255, 0.15); }
+.ocioso .btn-nova-sala { margin: 12px auto 0; display: block; opacity: 0.7; }
 .btn-recolher:hover { background: rgba(255, 255, 255, 0.15); }
 .corpo {
   display: flex;
@@ -142,7 +155,7 @@
   border-radius: 999px;
 }
 .btn-iniciar:hover, .btn-tocar:hover { background: #ff4560; }
-.btn-iniciar:focus-visible, .btn-tocar:focus-visible, .btn-recolher:focus-visible {
+.btn-iniciar:focus-visible, .btn-tocar:focus-visible, .btn-recolher:focus-visible, .btn-nova-sala:focus-visible {
   outline: 3px solid #ffe27a;
   outline-offset: 2px;
 }

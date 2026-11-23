@@ -50,7 +50,8 @@ export const E2C = {
 //   conns     { count, signaling: bool }      nº de celulares conectados / sinalização ok
 //   peerClose { connId }
 // sw -> offscreen   (target:'offscreen')
-//   initPeer  { roomId?, signaling }          criar Peer (reusar roomId salvo, se houver)
+//   initPeer  { roomId?, signaling, nova? }   criar Peer (reusar roomId salvo, se houver);
+//                                             nova:true = descartar a sala atual e abrir outra com ID novo
 //   send      { connId, msg }                 mensagem a uma conexão (E2C)
 //   broadcast { msg }                         mensagem a todas as conexões (E2C)
 // content -> sw     (target:'sw')
@@ -59,6 +60,7 @@ export const E2C = {
 //   ended     { videoId }                     vídeo terminou (o SW ignora se não for o `atual`)
 //   playerError { codigo, videoId }           vídeo indisponível/restrito/timeout
 //   playerStatus { pausado, mudo, volume }    estado do <video> (mudou); vira `player` no state
+//   newRoom   {}                              "Nova sala": derruba os celulares e troca o ID da sala (a fila é mantida)
 // sw -> content     (target:'content', via chrome.tabs.sendMessage)
 //   play      { videoId }
 //   control   { acao }                        comando do player (ACOES_CONTROLE)
@@ -68,7 +70,7 @@ export const INT = {
   ROOM: 'room', PEER_MSG: 'peerMsg', CONNS: 'conns', PEER_CLOSE: 'peerClose',
   INIT_PEER: 'initPeer', SEND: 'send', BROADCAST: 'broadcast',
   WHOAMI: 'whoami', STARTED: 'started', ENDED: 'ended', PLAYER_ERROR: 'playerError',
-  PLAYER_STATUS: 'playerStatus', CONTROL: 'control',
+  PLAYER_STATUS: 'playerStatus', CONTROL: 'control', NEW_ROOM: 'newRoom',
   PLAY: 'play', IDLE: 'idle', PANEL: 'panel',
 };
 export const TARGET = { SW: 'sw', OFFSCREEN: 'offscreen', CONTENT: 'content' };

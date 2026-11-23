@@ -115,6 +115,10 @@ export function criarNucleo(deps) {
   const doKtv = (sender) => sender?.tab?.id != null && sender.tab.id === rt.ktvTabId;
 
   // ---------- inicialização ----------
+  async function signalingAtual() {
+    const sobre = await storage.get(KEY_SIGNALING);
+    return sobre && typeof sobre === 'object' ? sobre : CONFIG.SIGNALING;
+  }
   async function init() {
     await carregar();
     if (await ensureOffscreen()) {
@@ -125,8 +129,7 @@ export function criarNucleo(deps) {
         await salvarRt();
       });
     }
-    const sobre = await storage.get(KEY_SIGNALING);
-    const signaling = sobre && typeof sobre === 'object' ? sobre : CONFIG.SIGNALING;
+    const signaling = await signalingAtual();
     const msg = { t: INT.INIT_PEER, signaling };
     if (estado.roomId) msg.roomId = estado.roomId;
     // O offscreen confirma com { ok }; recém-criado pode demorar a registrar o listener.
@@ -362,6 +365,19 @@ export function criarNucleo(deps) {
           estado = { ...estado, roomId: msg.roomId };
           await salvarEstado();
           await painel();
+        });
+
+      case INT.NEW_ROOM:
+        // "Nova sala": quem tinha o link/QR antigo não entra mais. A fila e o player seguem como estão.
+        return travar(async () => {
+          if (!doKtv(sender)) return undefined;
+          estado = { ...estado, roomId: null };
+          rt.peers = {};
+          rt.conns = { count: 0, signaling: false };
+          await Promise.all([salvarEstado(), salvarRt()]);
+          await painel(); // sem roomId: mostra "Conectando…" até o offscreen abrir a sala nova
+          const signaling = await signalingAtual();
+          await seguro(() => send({ t: INT.INIT_PEER, signaling, nova: true, target: TARGET.OFFSCREEN }));
         });
 
       case INT.CONNS:

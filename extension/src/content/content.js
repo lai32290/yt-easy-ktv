@@ -77,6 +77,8 @@
       state: quem.state, roomId: quem.roomId, siteUrl: quem.siteUrl, conns: quem.conns,
     };
     let iniciou = lerSessao('ktv.iniciou') === '1';
+    const NOVA_SALA = 'Nova sala';
+    const NOVA_SALA_CONFIRMA = 'Tem certeza? Toque de novo';
     let recolhido = lerSessao('ktv.recolhido') === '1';
     let querFullscreen = lerSessao('ktv.fullscreen') === '1'; // estava em tela cheia (sobrevive à recarga)
     let sessao = null; // reprodução atual (ver novaSessao)
@@ -117,10 +119,12 @@
             h('p', { class: 'instrucao' }),
             h('p', { class: 'url' }),
             h('p', { class: 'status', role: 'status' }),
-            h('p', { class: 'aviso', role: 'alert', hidden: true }))),
+            h('p', { class: 'aviso', role: 'alert', hidden: true }),
+            h('button', { type: 'button', class: 'btn-nova-sala' }, NOVA_SALA))),
         h('aside', { class: 'tocando', 'aria-label': 'Fila do KTV', hidden: true },
           h('header', {},
             h('span', { class: 'conns', role: 'status' }),
+            h('button', { type: 'button', class: 'btn-nova-sala' }, NOVA_SALA),
             h('button', {
               type: 'button', class: 'btn-recolher', 'aria-label': 'Recolher painel', 'aria-expanded': 'true',
             }, '–')),
@@ -138,7 +142,7 @@
     const $ = (sel) => sombra.querySelector(sel);
     const el = {
       ocioso: $('.ocioso'), tocando: $('.tocando'), iniciar: $('.iniciar'),
-      btnIniciar: $('.btn-iniciar'), btnTocar: $('.btn-tocar'), btnRecolher: $('.btn-recolher'),
+      btnIniciar: $('.btn-iniciar'), btnTocar: $('.btn-tocar'), btnRecolher: $('.btn-recolher'), btnsNovaSala: sombra.querySelectorAll('.btn-nova-sala'),
       qrGrande: $('.qr-grande'), qrPequeno: $('.qr-pequeno'),
       instrucao: $('.ocioso .instrucao'), urlTexto: $('.ocioso .url'), status: $('.ocioso .status'),
       avisoOcioso: $('.ocioso .aviso'), avisoTocando: $('.tocando .aviso'),
@@ -263,6 +267,26 @@
       el.btnRecolher.setAttribute('aria-expanded', String(!recolhido));
       el.btnRecolher.setAttribute('aria-label', recolhido ? 'Expandir painel' : 'Recolher painel');
       el.btnRecolher.textContent = recolhido ? '+' : '–';
+    }
+
+    // "Nova sala": exige segundo toque (derruba todos os celulares e invalida o QR antigo).
+    let armadaNovaSala = null;
+    function rotuloNovaSala(texto) { for (const b of el.btnsNovaSala) b.textContent = texto; }
+    function desarmarNovaSala() {
+      clearTimeout(armadaNovaSala);
+      armadaNovaSala = null;
+      rotuloNovaSala(NOVA_SALA);
+    }
+    for (const b of el.btnsNovaSala) {
+      b.addEventListener('click', () => {
+        if (armadaNovaSala === null) {
+          rotuloNovaSala(NOVA_SALA_CONFIRMA);
+          armadaNovaSala = setTimeout(desarmarNovaSala, 4000);
+          return;
+        }
+        desarmarNovaSala();
+        enviar({ t: INT.NEW_ROOM });
+      });
     }
 
     el.btnRecolher.addEventListener('click', () => {
