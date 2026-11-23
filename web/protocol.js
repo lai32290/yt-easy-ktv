@@ -4,8 +4,8 @@
 export const CONFIG = {
   // Servidor de sinalização do PeerJS. Para migrar para um próprio, mude só aqui.
   SIGNALING: { host: '0.peerjs.com', port: 443, path: '/', secure: true },
-  // URL do site do celular (GitHub Pages). A sala vai no hash: SITE_URL + '#sala=ID'.
-  SITE_URL: 'https://lai32290.github.io/yt-easy-ktv/',
+  // URL do site do celular (Cloudflare Workers). A sala vai no hash: SITE_URL + '#sala=ID'.
+  SITE_URL: 'https://yt-easy-ktv.lai32690.workers.dev/',
   // Quem pode pular a música atual: 'todos' | 'anfitriao' (anfitrião = fase opcional).
   SKIP_POLICY: 'todos',
   // Quem pode limpar a fila: 'todos' | 'anfitriao' (mesma lógica do SKIP_POLICY).
